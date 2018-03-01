@@ -4,9 +4,9 @@
 #           connections.
 #
 #
-# Version:  0.1
-# Date:     2018 02 20
-# Author:   Boris Steipe <boris.steipe@utoronto.ca>
+# Version:  0.2
+# Date:     2018 02 26
+# Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
 #           readr package
@@ -14,6 +14,8 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   0.2  Improve abstractions and modularization, move functions to
+#        separate file.
 #   0.1  First draft
 #
 # ToDo:
@@ -48,248 +50,65 @@
 
 # =    1  PARAMETERS  ==========================================================
 
-CHR20LENGTH   <- 64444167  # basepairs
+# Code should not contain "magic numbers". Constants that we need are
+# defined and commented here.
 
-# UTPoster prints from 24" x 36" to 60" x 300" (which is actually quite large).
-# let's assume letter size for this demo, and allow a 1" margin.
+CHR20LENGTH   <- 64444167  # basepairs of the chromosome we are working with
+
+DATAFILE <- "chr20_data.tsv"  # Chromosome data input. See the script
+                              # prepareGenomeData.R for a description of the
+                              # contents, and the code that produces it from
+                              # database sources.
+
+SVGFILE <- "test.svg"  # Filename for the output we produce
+
+# UTPoster prints from 24" x 36" all the way to 60" x 300".
+# Let's assume letter size for this demo, and subtract a 1" margin on both
+# sides.
 PAGEWIDTH  <- ( 8.5 - 2) * 2.54    # in cm
 PAGEHEIGHT <- (11.0 - 2) * 2.54    # in cm
-RESOLUTION <- 150 # pixels per 2.54 cm
-
-SVGFILE <- "test.svg"
+RESOLUTION <- 150                  # pixels per 2.54 cm
 
 
 
-# =    2  PACKAGES  ============================================================
-# Load all required packages.
-
-if (!require(readr, quietly=TRUE)) {
-  install.packages("readr")
-  library(readr)
-}
-
-
-# =    3  FUNCTIONS  ===========================================================
-
-# <functionName> <- function(<argumentName> = <defaultValue>,
-#                            <argumentName> = <defaultValue>,
-#                            <argumentName> = <defaultValue>) {
-#   # Purpose:
-#   #     <describe ...>
-#   #
-#   # Parameters:
-#   #     <name>:   <type>   <description
-#   #
-#   # Details:
-#   #     <description, notes, see-also ...>
-#   #
-#   # Value:
-#   #     <type, structure etc. of the single return value. Or:
-#   #     NA - function is invoked for its side effect of ... <describe>. >
+# =    2  PACKAGES AND FUNCTIONS
 #
-#   # <code ...>
-#
-#   return(<result>)
-# }
+# All required packages and functions are loaded from the source file below.
+# You can inspect/copy/modify the source code there.
 
-
-ang2rad <- function(a) {
-  # Purpose:
-  #    Convert a rotation angle in degrees from vertical in clockwise direction
-  #    to radians.
-  x <- ((2 * a) / 360) * pi  # degrees to radians
-  x <- -x                    # change direction of rotation
-  x <- x + (pi / 2)          # add 90°
-  return(x)
-}
-
-
-coord2circle <- function(start, end, l) {
- # Purpose:
- #     Convert start and end coordinates to a rotation angle on a unit circle of
- #     length l, also return the angle. We define 0° to be at the top, and
- #     the positive direction is clockwise.
-  rot <- (mean(c(start, end)) / l) * 360
-  th  <- ang2rad(rot)
-   return(c(cos(th), sin(th), rot))
-}
-
-
-SVGheader <- function() {
-  s <-    "<?xml version=\"1.0\" standalone=\"no\"?>"
-  s[2] <- paste("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"",
-                "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">")
-  return(s)
-}
-
-
-SVGdefinePage <- function(w, h) {
-  s <- paste("<svg",
-             sprintf("width=\"%f\"",  w),
-             sprintf("height=\"%f\"", h),
-             sprintf("viewbox=\"0 0 %f %f\"", w, h),
-             "version=\"1.1\"",
-             "xmlns=\"http://www.w3.org/2000/svg\">",
-             collapse = " ")
-  return(s)
-}
-
-
-SVGdrawCircle <- function(cx, cy, r,
-                          fill = "#FFFFFF",
-                          stroke= "#000000",
-                          sw = 1.0) {
-  s <- paste( sprintf("<circle cx=\"%f\"", cx),
-              sprintf("cy=\"%f\"", cy),
-              sprintf("r=\"%f\"", r),
-              sprintf("fill=\"%s\"", fill),
-              sprintf("stroke=\"%s\"", stroke),
-              sprintf("stroke-width=\"%f\" />", sw),
-              collapse = " ")
-  return(s)
-}
-
-
-SVGdrawText <- function(x, y,
-                        font,
-                        size,
-                        fill = "#FFFFFF",
-                        text) {
-  s <- paste( sprintf("<text x=\"%f\"", x),
-              sprintf("y=\"%f\"", y),
-              "alignment-baseline=\"middle\"", # this centers the string on
-              "text-anchor=\"middle\"",        # the (x, y) coordinates
-              sprintf("font-family=\"%s\"", font),
-              sprintf("font-size=\"%f\"", size),
-              sprintf("fill=\"%s\">", fill),
-              collapse = " ")
-  s <- c(s, text)
-  s <- c(s, "</text>")
-  return(s)
-}
-
-
-SVGdrawLine <- function(x1, y1, x2, y2,
-                        stroke = "#FFFFFF",
-                        sw = 1.0) {
-
-  s <- paste( sprintf("<line x1=\"%f\"", x1),
-              sprintf("y1=\"%f\"", y1),
-              sprintf("x2=\"%f\"", x2),
-              sprintf("y2=\"%f\"", y2),
-              sprintf("style=\"stroke:%s;", stroke),
-              sprintf("stroke-width:%f\" />", sw),
-              collapse = " ")
-  return(s)
-}
-
-
-SVGdrawRect <- function(x, y, w, h, ang,
-                        fill = "#FFFFFF",
-                        stroke = "none",
-                        sw = 0.0) {
-  s <- paste( "<g transform=\"",
-              sprintf("rotate(%f, %f, %f)", ang, x, y),
-              "\">",
-              collapse = " ")
-  s <- c(s, paste( sprintf("<rect x=\"%f\"", x - (w / 2)),
-                   sprintf("y=\"%f\"", y - (h / 2)),
-                   sprintf("width=\"%f\"", w),
-                   sprintf("height=\"%f\"", h),
-                   sprintf("fill=\"%s\"", fill),
-                   sprintf("stroke=\"%s\"", stroke),
-                   ifelse(stroke != "none",
-                          sprintf("stroke-width=\"%f\"", sw),
-                          ""),
-                   "/>",
-                   collapse = " "))
-  s <- c(s, "</g>")
-
-  return(s)
-}
-
-
-st <- function(xy, s, t, yPage) {
-  # simple scaling and tranlation - but could be extended to rotations,
-  # perspective skews, projections etc. etc.
-  # xy is a two-element vector
-  # s and t are scalars
-  # yPage is the height of the page
-  #
-  # Note that the SVG coordinate system has its origin top-left.
-  xy <- s * xy                      # scale
-  xy <- c(xy[1], yPage - xy[2])     # flip
-  xy <- xy + c(t[1], - t[2])        # translate
-  return(xy)
-}
-
-
-SVGrenderElement <- function(li, s, t, Y) {
-  if (li$type == "circle") {
-    xy <- st(li$centre, s, t, Y)
-    s <- SVGdrawCircle(cx = xy[1],
-                       cy = xy[2],
-                       r = li$radius * s,
-                       fill = li$fill,
-                       stroke = li$stroke,
-                       sw = li$sw)
-  } else if (li$type == "text") {
-    xy <- st(li$centre, s, t, Y)
-    s <- SVGdrawText(x = xy[1],
-                     y = xy[2],
-                     font = li$font,
-                     size = li$size,
-                     fill = li$fill,
-                     text = li$text)
-  }  else if (li$type == "line") {
-    xy1 <- st(li$p1, s, t, Y)
-    xy2 <- st(li$p2, s, t, Y)
-    s <- SVGdrawLine(x1 = xy1[1],
-                     y1 = xy1[2],
-                     x2 = xy2[1],
-                     y2 = xy2[2],
-                     stroke = li$stroke,
-                     sw = li$sw)
-  }  else if (li$type == "rect") {
-    xy <- st(li$corner, s, t, Y)
-    s <- SVGdrawRect(x = xy[1],
-                     y = xy[2],
-                     w = li$w * s,
-                     h = li$h * s,
-                     ang = li$ang,
-                     fill = li$fill,
-                     stroke = li$stroke,
-                     sw = li$sw)
-  } else {
-    stop(sprintf("Unsupported SVG element type \"%s\"", li$type == "line"))
-  }
-
-  return(s)
-}
-
+source("genomePlotFunctions.R")
 
 
 
 # =    4  PROCESS  =============================================================
 
-# This demo will plot genes as rectangles on a circle, color the boxes, and
-# connect genes with the same GOA annotations with a line
+# This demo code will plot genes as rectangles on a circle, color the boxes, and
+# connect genes that share the same function category with a line.
 
 
+# ==   4.1  READ SOURCE DATA =========================================
 
-myData <- read_tsv("chr20_data.tsv")
+# read_tsv() is from the readr package. It is similar to base R's read.delim()
+# function, but more modern.
 
-# ==   4.1  INITIALIZE  ========================================================
+myData <- read_tsv(DATAFILE)
 
-# Create a table of gene objects to draw:
 
-N <- length(myData$sym)
+# ==   4.1  INITIALIZE DATA STRUCTURES =========================================
 
-# Entity annotations: date for each gene
-myGenes <- data.frame(sym = myData$sym,
-                      start = numeric(N),
-                      end = numeric(N),
-                      GOAid = myData$GOAid,
+# There are many possibilities to store the data for the objects we will analyze
+# and draw. Here we take a very simple approach and store gene-level data in one
+# data frame, relationship data in another data frame. We start with minimal
+# data but will add a few data columns during annotation.
+
+N <- nrow(myData)
+
+# Entity annotations: data for each gene
+myGenes <- data.frame(sym = myData$sym,            # Gene symbols
+                      start = myData$start,        # start
+                      end = myData$end,            # end
+                      strand = myData$strand,      # strand
+                      GOAid = myData$GOAid,        # GO annotation
                       stringsAsFactors = FALSE)
 
 # Relationship annotations: from <symbol> to <symbol>
@@ -298,167 +117,255 @@ myEdges <- data.frame(from = character(),
                       stringsAsFactors = FALSE)
 
 
+
 # ==   4.2  ANNOTATE  ==========================================================
 
-N <- nrow(myGenes)
+# We will derive the following annotations from the data we have loaded:
+#
+# A: we will define a "relationship" between all genes that have the same
+#    GO annotation.
+# B: each relationship will get a "type". For this demo the type is simply
+#    the same as the GO annotation. It could be anything though.
+# C: each relationship will get a "weight". For this demo the weight is simply
+#    1 minus the frequency of the GO annotation, that is: more specific
+#    annotations get a lower weight, more generic annotations get a higher
+#    weight.
 
-# Entity annotations: start and end coordinates (in fractional
-# coordinates of the chromosome), and GOAid
-for (i in 1:N) {  # for all rows
-  sel <- which(myData$sym == myGenes$sym[i])
-  myGenes$GOAid[i] <- myData$GOAid[sel]
-  myGenes$start[i] <- myData$start[sel]
-  myGenes$end[i]   <- myData$end[sel]
+
+# = 1.1.1 Annotate relationships:
+
+for (i in 1:nrow(myGenes)){
+  # for each gene, add an edge to all other genes with the same GO id.
+  thisSym <- myGenes$sym[i]
+  thisGOid <- myGenes$GOAid[i]
+
+  sel <- which(myGenes$GOAid == thisGOid) # all genes with this GO id
+  sel <- sel[sel != i] # remove the index of the original (no self-edge)
+
+  myEdges <- rbind(myEdges, data.frame(from = rep(thisSym, length(sel)),
+                                       to = myGenes$sym[sel],
+                                       stringsAsFactors = FALSE))
 }
 
 
-# Relationship annotations: edges from <symbol> to <symbol>
-for (i in 1:N) {  # for all rows
-  thisGOA <- myGenes$GOAid[i]   # fetch the GOAid
-  sel <- which(myGenes$GOAid == thisGOA) # fetch all rows that have the same GOAid
-  sel <- sel[!(sel == i)] # remove self-edges
-  if (length(sel) > 0) {  # if there are any
-    for (j in sel) { # add an edge between the current row and all
-      # others with the same GOAid
-      thisRow <- nrow(myEdges) + 1
-      myEdges[thisRow, 1] <- myGenes$sym[i]
-      myEdges[thisRow, 2] <- myGenes$sym[j]
-    }
-  }
+
+# = 1.1.1 Annotate relationship types:
+
+myEdges$type <- character(nrow(myEdges)) # add "type" column
+
+for (i in 1:nrow(myEdges)){  # for each edge, add the GO id of the "from" gene.
+
+  sel <- which(myGenes$sym == myEdges$from[i])[1]  # take first match
+  myEdges$type[i] <- myGenes$GOAid[sel]
 }
+
+
+
+
+# = 1.1.1 Annotate relationship weights:
+
+wGOA <- linMap(table(myGenes$GOAid),
+               low = 0.99,
+               high = 0.01) # map frequencies to weights
+
+myEdges$weight <- numeric(nrow(myEdges)) # add "weight" column
+
+for (i in 1:nrow(myEdges)){  # for each edge, add the weight of the "from" gene.
+  myEdges$weight[i] <- wGOA[myEdges$type[i]]
+}
+
+
+# Done with annotations
 
 
 # ==   4.3  LAYOUT  ============================================================
 
-# We will draw everything on a virtual canvas, centred on (0, 0) ranging from -1
-# to +1 in x and y. Only later, when we output it to SVG, we will scale the
-# layout to the page.
+# The layout phase is where we turn data into visuals.
 
-# To define global layout elements, we can e.g. describe them in a
-# list-of-lists. Here are two sample elements: a circle (the chromosome
-# backbone), and a piece of text (the chromosome number).
-myLayoutElements <- list()
-myLayoutElements[[1]] <- list(type = "circle",
-                         centre = c(0, 0),
-                         radius = 1.0,
-                         fill = "#FFFFFF",
-                         stroke = "#4499AA",
-                         sw = 7.0)
+# Since we need to accommodate quite different types of objects, we will collect
+# them in a list. Each element is itself a list that describes the
+# object with all the detail we need so we can draw it out later.
 
-myLayoutElements[[2]] <- list(type = "text",
-                                text = "CHR 20",
-                                centre = c(0, 0),
-                                size = 48,
-                                font = "Times",
-                                fill = "#33AAFF")
+myShapes <- list()
+
+# We will call the things that we are going to draw "shapes".
+# To draw our shapes, we need to define:
+#  - what they are
+#  - where the are going to be drawn
+#  - how large
+#  - with what stroke-width
+#  - with what colour
+#  - with what fill
+#  - ...  Many other attributes can be added - perspective, labels,
+#         curvature, line type, shadow, gradient etc. etc.
 
 
-# Per-entity layout for genes: each gene will be drawn as a colored box, placed
-# on the circle and rotated appropriately. We store the (x, y) of the centre, as
-# well as width and height of the rectangle, and the angle through which it
-# should be rotated.
-N <- nrow(myGenes)
-myGenes$x   <- numeric(N)
-myGenes$y   <- numeric(N)
-myGenes$ang <- numeric(N)
-myGenes$w   <- numeric(N)
-myGenes$h   <- numeric(N)
+# Let's start with some generic elements to structure our plot. We will draw the
+# chromosome backbone as a circle and we will add the chromosome name as a text
+# element.
 
-for (i in 1:N) {
-  xya <- coord2circle(myGenes$start[i], myGenes$end[i], CHR20LENGTH)
-  myGenes$x[i]   <- xya[1]
-  myGenes$y[i]   <- xya[2]
-  myGenes$ang[i] <- xya[3]
-  myGenes$w[i]   <- abs(myGenes$start[i] - myGenes$end[i]) / CHR20LENGTH
-  myGenes$h[i]   <- 0.05 # 5% of the radius
-}
+# At first, we are only concerned with relative positions and we will layout
+# shapes into an arbitrary canvas. Later we will map this into page coordinates.
+# The cromosome circle we will define will be centred on (1, 1), and it we will
+# give it a radius of 1.0
 
-# Per-entity layout for edges: add coordinates to the Edges
-N <- nrow(myEdges)
-myEdges$x1 <- numeric(N)
-myEdges$y1 <- numeric(N)
-myEdges$x2 <- numeric(N)
-myEdges$y2 <- numeric(N)
+# Chromosome backbone:
 
-for (i in 1:N) {
-  j <- which(myEdges$from[i] == myGenes$sym)
-  k <- which(myEdges$to[i]   == myGenes$sym)
-  myEdges$x1[i] <- myGenes$x[j]
-  myEdges$y1[i] <- myGenes$y[j]
-  myEdges$x2[i] <- myGenes$x[k]
-  myEdges$y2[i] <- myGenes$y[k]
-}
+CHR20ORI <- c(1.0, 1.0)
+CHR20RAD <- 1.0
+
+myShapes[[1]] <- list(type = "circle",
+                      centre = CHR20ORI,
+                      radius = CHR20RAD,
+                      fill = "#FFFFFF",    # fill colour
+                      stroke = "#4499AA",  # colour of outline
+                      sw = 7.0)            # stroke-width
 
 
-# ==   4.4  OPTIMIZE AESTHETICS  ===============================================
+# Next we add some descriptive text:
 
-# Add color values to the gene annotations
-N <- nrow(myGenes)
-nCol <- length(unique(myGenes$GOAid))
+myShapes[[2]] <- list(type = "text",
+                      text = "CHR 20",
+                      centre = CHR20ORI,
+                      size = 48,           # points
+                      font = "Times",
+                      fill = "#33AAFF")
 
-myGenes$col <- character(N)
-myGOAs <- sort(unique(myGenes$GOAid))
+# Next we add the genes. We will draw them as rectangles, with a height of a
+# fraction of the circle radius. We will place them on the circle at their
+# fractional position on the chromosome, and we will rotate them so they point
+# radially on the origin. We will also give them colour:
 
-for (i in 1:N) {
-  myGenes$col[i] <- rainbow(nCol)[which(myGenes$GOAid[i] == myGOAs)]
-}
-
-# Add color values from gene to the edges
-N <- nrow(myEdges)
-myEdges$col <- character(N)
-
-for (i in 1:N) {
-  idx <- which(myGenes$sym == myEdges$from[i])
-  myEdges$col[i] <- myGenes$col[idx]
-}
-
-# Encode information in edge thickness (stroke-width). We could also
-# add an alpha channel to the edge color and make edges transparent. Just
-# append a two digit hex value to the color, where 00 is fully transparent
-# and FF is fully opaque. Eg. "#FF00007F" is a 50% transparent red.
+# Colour:
+# We are providing a function category2colour() to make life simple. It
+# takes a vector of items, and returns a named vector of corresponding
+# color values.
 #
-# Just to demonstrate, we'll draw frequently observed GOAids with a thin line
-# (0.05) and rarely observed GOAids with a thick line (0.5).
+# For this demo we will color the genes by their function. Thus we define
+# a basic, divergent spectrum, and map these colors to GO ids.
 
-# Make a table of GOAid frequencies, log() the values
-GOAtable <- log(table(myGenes$GOAid))
-# Scale them to [1, 0]
-GOAtable <- 1 - ((GOAtable - min(GOAtable)) / (max(GOAtable) - min(GOAtable)))
-# Scale the result to [0.05, 0.5]
-GOAtable <- (GOAtable * (0.5 - 0.05)) + 0.05
+mySpect <- c("#f2003c",  # red
+             "#F0A200",  # orange
+             "#f0ea00",  # yellow
+             "#62C923",  # green
+             "#0A9A9B",  # blue
+             "#1958C3",  # indigo
+             "#8000D3",  # violet
+             "#D0007F")  # red
 
-N <- nrow(myEdges)
-myEdges$sw <- numeric(N)
+myGOcolours <- category2colour(unique(myGenes$GOAid),
+                               col = mySpect)
 
-for (i in 1:N) {
-  idx <- which(myGenes$sym == myEdges$from[i])
-  myEdges$sw[i] <- GOAtable[myGenes$GOAid[idx]]
+
+
+# Add each gene to the list:
+
+for (i in 1:nrow(myGenes)) {
+
+  # The centre of the rectangle is placed on the circle
+  # returns x, y, and rotation angle
+  circDat <- coord2circle(mean(c(myGenes$start[i], myGenes$end[i])),
+                          CHR20LENGTH,
+                          CHR20ORI,
+                          CHR20RAD)
+  width <- abs(myGenes$start[i] - myGenes$end[i]) / CHR20LENGTH  # relative ...
+  width <- width * 2 * pi * CHR20RAD                             # on the circle
+
+  height <- 0.05 * CHR20RAD   # 5% of circle radius
+
+  # Layout for genes: each gene will be drawn as a colored box, placed on the
+  # circle and rotated appropriately. We store the (x, y) of the centre, as well
+  # as width and height of the rectangle, and the angle through which it should
+  # be rotated. We use the colour for GO anotations we defined above. At this
+  # scale, a typical gene is about a hair's width. We draw the outline of the
+  # rectangle, with a thin line, to give it a minimum width for visibility.
+
+  # Define a rectangle shape with these parameters:
+  myShapes[[length(myShapes) + 1]] <- list(type = "rect",
+                                           centre = circDat[1:2],
+                                           w = width,
+                                           h = height,
+                                           ang = circDat[3],
+                                           fill = myGOcolours[myGenes$GOAid[i]],
+                                           stroke = myGOcolours[myGenes$GOAid[i]],
+                                           sw = 0.5)  # points
 }
 
 
 
-# ==   4.5  CREATE SVG  ========================================================
+# Next, add each relationship to the list:
+
+for (i in 1:nrow(myEdges)) {
+
+  iFrom <- which(myGenes$sym == myEdges$from[i])
+  iTo <-   which(myGenes$sym == myEdges$to[i])
+
+  xyFrom <- coord2circle(mean(c(myGenes$start[iFrom], myGenes$end[iFrom])),
+                         CHR20LENGTH,
+                         CHR20ORI,
+                         CHR20RAD)[1:2]
+  xyTo   <- coord2circle(mean(c(myGenes$start[iTo], myGenes$end[iTo])),
+                         CHR20LENGTH,
+                         CHR20ORI,
+                         CHR20RAD)[1:2]
+
+  myShapes[[length(myShapes) + 1]] <- list(type = "line",
+                                           p1 = xyFrom,
+                                           p2 = xyTo,
+                                           stroke = myGOcolours[myEdges$type[i]],
+                                           sw = myEdges$weight[i])
+}
+
+
+# Done. All shapes are defined.
+
+
+# ==   4.5  PLOT  ==============================================================
 # cf. https://www.w3.org/TR/SVG
 
 # ===  4.5.1  Compute scale and translation
 
 # Caution: the SVG coordinate system has its origin (0, 0) in the TOP LEFT
-# corner, positive X goes right, and positive Y goes down. Our
-# transformation routine takes care of this.
+# corner, positive X goes right, and positive Y goes down. Here we define the
+# necessary scaling and translation.
 
-dX <- range(myGenes$x)[2] - range(myGenes$x)[1] # range in cm
-dY <- range(myGenes$y)[2] - range(myGenes$y)[1] #
+# First: we fetch the centres of genes from the list shapes to compute
+# the range of x and y values we will plot.
 
-sXY <- min((RESOLUTION * (PAGEWIDTH / 2.54)) / dX, # scale: unit circle (in cm)
-         (RESOLUTION * (PAGEHEIGHT / 2.54)) / dY)  # to fill page (in pixel)
+xs <- numeric()
+ys <- numeric()
+
+for (i in 1:length(myShapes)) {
+  if (myShapes[[i]]$type == "rect") {
+    xs <- c(xs, myShapes[[i]]$centre[1])
+    ys <- c(ys, myShapes[[i]]$centre[2])
+  }
+}
+
+
+# Next, we compute the range of x and y values:
+
+dX <- range(xs)[2] - range(xs)[1]
+dY <- range(ys)[2] - range(ys)[1]
+
+
+# Given the range that needs to fit on the page, we can compute the scale:
+
+sXY <- min((RESOLUTION * (PAGEWIDTH / 2.54)) / dX,
+         (RESOLUTION * (PAGEHEIGHT / 2.54)) / dY)
 
 sXY <- sXY * 0.95 # tweak it a bit smaller to allow for stroke widths
+
+
+# We compute the dimensions of the page in pixels ...
 
 Xpx <- RESOLUTION * (PAGEWIDTH  / 2.54)
 Ypx <- RESOLUTION * (PAGEHEIGHT / 2.54)
 
-tXY <- c(Xpx / 2, Ypx / 2)  # translate
+# And we compute a translation: for this demo, we move our CHR20ORI
+# to the centre of the page:
 
+tXY <- c(Xpx / 2, Ypx / 2)  - (sXY * CHR20ORI)  # translate
 
 
 
@@ -467,59 +374,27 @@ mySVG <- SVGheader()
 mySVG <- c(mySVG, SVGdefinePage(Xpx, Ypx))
 
 
-# ===  4.5.3  Render global layout elements
-for (i in 1:length(myLayoutElements)) {
-   mySVG <- c(mySVG, SVGrenderElement(myLayoutElements[[i]],
-                                      s = sXY,
-                                      t = tXY,
-                                      Y = Ypx))
-}
+# ===  4.5.3  Render all elements
+#
+for (i in 1:length(myShapes)) {
 
-
-# ===  4.5.4  Render edges
-for (i in 1:nrow(myEdges)) {
-  mySVG <- c(mySVG, SVGrenderElement(list(type = "line",
-                                          p1 = c(myEdges$x1[i], myEdges$y1[i]),
-                                          p2 = c(myEdges$x2[i], myEdges$y2[i]),
-                                          stroke = myEdges$col[i],
-                                          sw = myEdges$sw[i]),
+  mySVG <- c(mySVG, SVGrenderElement(myShapes[[i]],
                                      s = sXY,
                                      t = tXY,
                                      Y = Ypx))
 }
-
-# ===  4.5.5  Render genes
-for (i in 1:nrow(myGenes)) {
-  mySVG <- c(mySVG, SVGrenderElement(list(type = "rect",
-                                          corner = c(myGenes$x[i], myGenes$y[i]),
-                                          w = myGenes$w[i],
-                                          h = myGenes$h[i],
-                                          ang = myGenes$ang[i],
-                                          fill = myGenes$col[i],
-                                # At this scale, a typical gene is about a
-                                # hair's width. We "stroke" the rectangle, to
-                                # give it a minimum width for visibility.
-                                          stroke = myGenes$col[i],
-                                          sw = 0.5),
-                                     s = sXY,
-                                     t = tXY,
-                                     Y = Ypx))
-}
-
-
-
-
 
 
 # ===  4.5.6  Write SVG footer
 mySVG <- c(mySVG, "</svg>")
 
 
-# ==   4.6  WRITE SVG TO FILE AND VIEW  ========================================
+# ==   4 FINISH  ===============================================================
 
+# Write the SVG to file
 writeLines(mySVG, con = SVGFILE)
 
-# Visualize
+# Open the SVG in the default browser to visualize
 system(sprintf("open -a \"Google Chrome\" %s", SVGFILE))   # For MacOS
 # Windows ???
 # Linux ???

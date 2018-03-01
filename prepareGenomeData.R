@@ -67,8 +67,13 @@ if (!require(readr, quietly=TRUE)) {
 
 # Read file obtained via custom download from ensembl biomart
 # Custom download:
-# Filters: Chromosome/scaffold: 20
-#          With HGNC Symbol ID(s): Only
+#
+# Ensembl Genes 91
+#
+# Dataset: Human genes (GRCh38.p10)
+#
+# Filters: REGION: Chromosome/scaffold: 20
+#          GENE: With HGNC Symbol ID(s): Only
 # Attrib.: Gene stable ID
 #          Gene start (bp)
 #          Gene end (bp)
