@@ -359,12 +359,15 @@ SVGdrawRect <- function(x, y, w, h, ang,
   #     <...>
   #
 
+  crX <- x + (w / 2)
+  crY <- y + (h / 2)
+
   s <- paste( "<g transform=\"",
-              sprintf("rotate(%f, %f, %f)", ang, x, y),
+              sprintf("rotate(%f, %f, %f)", ang, crX, crY),
               "\">",
               collapse = " ")
-  s <- c(s, paste( sprintf("<rect x=\"%f\"", x - (w / 2)),
-                   sprintf("y=\"%f\"", y - (h / 2)),
+  s <- c(s, paste( sprintf("<rect x=\"%f\"", x),
+                   sprintf("y=\"%f\"", y),
                    sprintf("width=\"%f\"", w),
                    sprintf("height=\"%f\"", h),
                    sprintf("fill=\"%s\"", fill),
@@ -432,17 +435,17 @@ st <- function(xy, s, t, yPage) {
 # Notes:
 #     <...>
 #
-SVGrenderElement <- function(li, s, t, Y) {
+SVGrenderElement <- function(li, sc, tr, Y) {
   if (li$type == "circle") {
-    xy <- st(li$centre, s, t, Y)
+    xy <- st(li$centre, sc, tr, Y)
     s <- SVGdrawCircle(cx = xy[1],
                        cy = xy[2],
-                       r = li$radius * s,
+                       r = li$radius * sc,
                        fill = li$fill,
                        stroke = li$stroke,
                        sw = li$sw)
   } else if (li$type == "text") {
-    xy <- st(li$centre, s, t, Y)
+    xy <- st(li$centre, sc, tr, Y)
     s <- SVGdrawText(x = xy[1],
                      y = xy[2],
                      font = li$font,
@@ -450,8 +453,8 @@ SVGrenderElement <- function(li, s, t, Y) {
                      fill = li$fill,
                      text = li$text)
   }  else if (li$type == "line") {
-    xy1 <- st(li$p1, s, t, Y)
-    xy2 <- st(li$p2, s, t, Y)
+    xy1 <- st(li$p1, sc, tr, Y)
+    xy2 <- st(li$p2, sc, tr, Y)
     s <- SVGdrawLine(x1 = xy1[1],
                      y1 = xy1[2],
                      x2 = xy2[1],
@@ -460,12 +463,12 @@ SVGrenderElement <- function(li, s, t, Y) {
                      sw = li$sw)
   }  else if (li$type == "rect") {
     xCorner <- li$centre[1] - (li$w / 2)
-    yCorner <- li$centre[2] - (li$h / 2)
-    xy <- st(c(xCorner, yCorner), s, t, Y)
+    yCorner <- li$centre[2] + (li$h / 2)
+    xy <- st(c(xCorner, yCorner), sc, tr, Y)
     s <- SVGdrawRect(x = xy[1],
                      y = xy[2],
-                     w = li$w * s,
-                     h = li$h * s,
+                     w = li$w * sc,
+                     h = li$h * sc,
                      ang = li$ang,
                      fill = li$fill,
                      stroke = li$stroke,

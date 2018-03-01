@@ -4,8 +4,8 @@
 #           connections.
 #
 #
-# Version:  0.2
-# Date:     2018 02 26
+# Version:  0.3
+# Date:     2018 02 28
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -14,6 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   0.3  Bugfix in coordinate scaling to SVG coordinates for rectangles
 #   0.2  Improve abstractions and modularization, move functions to
 #        separate file.
 #   0.1  First draft
@@ -296,10 +297,8 @@ for (i in 1:nrow(myGenes)) {
 # Next, add each relationship to the list:
 
 for (i in 1:nrow(myEdges)) {
-
   iFrom <- which(myGenes$sym == myEdges$from[i])
   iTo <-   which(myGenes$sym == myEdges$to[i])
-
   xyFrom <- coord2circle(mean(c(myGenes$start[iFrom], myGenes$end[iFrom])),
                          CHR20LENGTH,
                          CHR20ORI,
@@ -308,7 +307,6 @@ for (i in 1:nrow(myEdges)) {
                          CHR20LENGTH,
                          CHR20ORI,
                          CHR20RAD)[1:2]
-
   myShapes[[length(myShapes) + 1]] <- list(type = "line",
                                            p1 = xyFrom,
                                            p2 = xyTo,
