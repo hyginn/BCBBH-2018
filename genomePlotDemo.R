@@ -26,24 +26,24 @@
 
 #TOC> ==========================================================================
 #TOC>
-#TOC>   Section  Title                            Line
-#TOC> ------------------------------------------------
-#TOC>   1        PARAMETERS                         48
-#TOC>   2        PACKAGES                           62
-#TOC>   3        FUNCTIONS                          71
-#TOC>   4        PROCESS                           272
-#TOC>   4.1      INITIALIZE                        281
-#TOC>   4.2      ANNOTATE                          300
-#TOC>   4.3      LAYOUT                            330
-#TOC>   4.4      OPTIMIZE AESTHETICS               392
-#TOC>   4.5      CREATE SVG                        439
-#TOC>   4.5.1    Compute scale and translation     442
-#TOC>   4.5.2    Write SVG header                  464
-#TOC>   4.5.3    Render global layout elements     469
-#TOC>   4.5.4    Render edges                      478
-#TOC>   4.5.5    Render genes                      490
-#TOC>   4.5.6    Write SVG footer                  513
-#TOC>   4.6      WRITE SVG TO FILE AND VIEW        517
+#TOC>   Section  Title                             Line
+#TOC> -------------------------------------------------
+#TOC>   1        PARAMETERS                          51
+#TOC>   2        PACKAGES AND FUNCTIONS              74
+#TOC>   3        PROCESS                             83
+#TOC>   3.1        READ SOURCE DATA                  89
+#TOC>   3.2        INITIALIZE DATA STRUCTURES        97
+#TOC>   3.3        ANNOTATE                         121
+#TOC>   3.3.1        Annotate relationships:        135
+#TOC>   3.3.2        Annotate relationship types:   152
+#TOC>   3.3.3        Annotate relationship weights: 165
+#TOC>   3.4        LAYOUT                           181
+#TOC>   3.5        PLOT                             323
+#TOC>   3.5.1        Compute scale and translation  326
+#TOC>   3.5.2        Write SVG header               372
+#TOC>   3.5.3        Render all elements            377
+#TOC>   3.5.4        Write SVG footer               388
+#TOC>   4        FINISH                             392
 #TOC>
 #TOC> ==========================================================================
 
@@ -71,7 +71,7 @@ RESOLUTION <- 150                  # pixels per 2.54 cm
 
 
 
-# =    2  PACKAGES AND FUNCTIONS
+# =    2  PACKAGES AND FUNCTIONS  ==============================================
 #
 # All required packages and functions are loaded from the source file below.
 # You can inspect/copy/modify the source code there.
@@ -80,13 +80,13 @@ source("genomePlotFunctions.R")
 
 
 
-# =    4  PROCESS  =============================================================
+# =    3  PROCESS  =============================================================
 
 # This demo code will plot genes as rectangles on a circle, color the boxes, and
 # connect genes that share the same function category with a line.
 
 
-# ==   4.1  READ SOURCE DATA =========================================
+# ==   3.1  READ SOURCE DATA  ==================================================
 
 # read_tsv() is from the readr package. It is similar to base R's read.delim()
 # function, but more modern.
@@ -94,7 +94,7 @@ source("genomePlotFunctions.R")
 myData <- read_tsv(DATAFILE)
 
 
-# ==   4.1  INITIALIZE DATA STRUCTURES =========================================
+# ==   3.2  INITIALIZE DATA STRUCTURES  ========================================
 
 # There are many possibilities to store the data for the objects we will analyze
 # and draw. Here we take a very simple approach and store gene-level data in one
@@ -118,7 +118,7 @@ myEdges <- data.frame(from = character(),
 
 
 
-# ==   4.2  ANNOTATE  ==========================================================
+# ==   3.3  ANNOTATE  ==========================================================
 
 # We will derive the following annotations from the data we have loaded:
 #
@@ -132,7 +132,7 @@ myEdges <- data.frame(from = character(),
 #    weight.
 
 
-# = 1.1.1 Annotate relationships:
+# ===   3.3.1  Annotate relationships:
 
 for (i in 1:nrow(myGenes)){
   # for each gene, add an edge to all other genes with the same GO id.
@@ -149,7 +149,7 @@ for (i in 1:nrow(myGenes)){
 
 
 
-# = 1.1.1 Annotate relationship types:
+# ===   3.3.2  Annotate relationship types:
 
 myEdges$type <- character(nrow(myEdges)) # add "type" column
 
@@ -162,7 +162,7 @@ for (i in 1:nrow(myEdges)){  # for each edge, add the GO id of the "from" gene.
 
 
 
-# = 1.1.1 Annotate relationship weights:
+# ===   3.3.3  Annotate relationship weights:
 
 wGOA <- linMap(table(myGenes$GOAid),
                low = 0.99,
@@ -178,7 +178,7 @@ for (i in 1:nrow(myEdges)){  # for each edge, add the weight of the "from" gene.
 # Done with annotations
 
 
-# ==   4.3  LAYOUT  ============================================================
+# ==   3.4  LAYOUT  ============================================================
 
 # The layout phase is where we turn data into visuals.
 
@@ -320,10 +320,10 @@ for (i in 1:nrow(myEdges)) {
 # Done. All shapes are defined.
 
 
-# ==   4.5  PLOT  ==============================================================
+# ==   3.5  PLOT  ==============================================================
 # cf. https://www.w3.org/TR/SVG
 
-# ===  4.5.1  Compute scale and translation
+# ===   3.5.1  Compute scale and translation
 
 # Caution: the SVG coordinate system has its origin (0, 0) in the TOP LEFT
 # corner, positive X goes right, and positive Y goes down. Here we define the
@@ -369,12 +369,12 @@ tXY <- c(Xpx / 2, Ypx / 2)  - (sXY * CHR20ORI)  # translate
 
 
 
-# ===  4.5.2  Write SVG header
+# ===   3.5.2  Write SVG header
 mySVG <- SVGheader()
 mySVG <- c(mySVG, SVGdefinePage(Xpx, Ypx))
 
 
-# ===  4.5.3  Render all elements
+# ===   3.5.3  Render all elements
 #
 for (i in 1:length(myShapes)) {
 
@@ -385,11 +385,11 @@ for (i in 1:length(myShapes)) {
 }
 
 
-# ===  4.5.6  Write SVG footer
+# ===   3.5.4  Write SVG footer
 mySVG <- c(mySVG, "</svg>")
 
 
-# ==   4 FINISH  ===============================================================
+# =    4  FINISH  ==============================================================
 
 # Write the SVG to file
 writeLines(mySVG, con = SVGFILE)

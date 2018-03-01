@@ -19,18 +19,18 @@
 #TOC>   1        PACKAGES                                     38
 #TOC>   2        FUNCTIONS TO INITIALIZE DATA STRUCTURES      46
 #TOC>   3        ANNOTATION FUNCTIONS                         49
-#TOC>   4        LAYOUT FUNCTIONS                             52
-#TOC>   4.1      ang2rad()                                    54
-#TOC>   4.2      coord2circle()                               84
-#TOC>   5        PLOTTING FUNCTIONS                          114
-#TOC>   5.1      SVGheader()                                 116
-#TOC>   5.2      SVGdefinePage()                             142
-#TOC>   5.3      SVGdrawCircle()                             173
-#TOC>   5.4      SVGdrawText()                               207
-#TOC>   5.5      SVGdrawLine()                               245
-#TOC>   5.6      SVGdrawRect()                               278
-#TOC>   5.7      st()                                        322
-#TOC>   5.8      SVGrenderElement()                          356
+#TOC>   4        LAYOUT FUNCTIONS                             63
+#TOC>   4.1        ang2rad()                                 111
+#TOC>   4.2        coord2circle()                            141
+#TOC>   5        PLOTTING FUNCTIONS                          175
+#TOC>   5.1        SVGheader()                               177
+#TOC>   5.2        SVGdefinePage()                           203
+#TOC>   5.3        SVGdrawCircle()                           234
+#TOC>   5.4        SVGdrawText()                             268
+#TOC>   5.5        SVGdrawLine()                             306
+#TOC>   5.6        SVGdrawRect()                             339
+#TOC>   5.7        st()                                      383
+#TOC>   5.8        SVGrenderElement()                        417
 #TOC>
 #TOC> ==========================================================================
 
