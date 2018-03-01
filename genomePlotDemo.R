@@ -29,22 +29,22 @@
 #TOC>
 #TOC>   Section  Title                             Line
 #TOC> -------------------------------------------------
-#TOC>   1        PARAMETERS                          51
-#TOC>   2        PACKAGES AND FUNCTIONS              74
-#TOC>   3        PROCESS                             83
-#TOC>   3.1        READ SOURCE DATA                  89
-#TOC>   3.2        INITIALIZE DATA STRUCTURES        97
-#TOC>   3.3        ANNOTATE                         121
-#TOC>   3.3.1        Annotate relationships:        135
-#TOC>   3.3.2        Annotate relationship types:   152
-#TOC>   3.3.3        Annotate relationship weights: 165
-#TOC>   3.4        LAYOUT                           181
-#TOC>   3.5        PLOT                             323
-#TOC>   3.5.1        Compute scale and translation  326
-#TOC>   3.5.2        Write SVG header               372
-#TOC>   3.5.3        Render all elements            377
-#TOC>   3.5.4        Write SVG footer               388
-#TOC>   4        FINISH                             392
+#TOC>   1        PARAMETERS                          52
+#TOC>   2        PACKAGES AND FUNCTIONS              75
+#TOC>   3        PROCESS                             84
+#TOC>   3.1        READ SOURCE DATA                  90
+#TOC>   3.2        INITIALIZE DATA STRUCTURES        98
+#TOC>   3.3        ANNOTATE                         122
+#TOC>   3.3.1        Annotate relationships:        136
+#TOC>   3.3.2        Annotate relationship types:   153
+#TOC>   3.3.3        Annotate relationship weights: 166
+#TOC>   3.4        LAYOUT                           182
+#TOC>   3.5        PLOT                             320
+#TOC>   3.5.1        Compute scale and translation  323
+#TOC>   3.5.2        Write SVG header               369
+#TOC>   3.5.3        Render all elements            374
+#TOC>   3.5.4        Write SVG footer               385
+#TOC>   4        FINISH                             389
 #TOC>
 #TOC> ==========================================================================
 
@@ -207,7 +207,7 @@ myShapes <- list()
 
 # At first, we are only concerned with relative positions and we will layout
 # shapes into an arbitrary canvas. Later we will map this into page coordinates.
-# The cromosome circle we will define will be centred on (1, 1), and it we will
+# The chromosome circle we will define will be centred on (1, 1), and it we will
 # give it a radius of 1.0
 
 # Chromosome backbone:
@@ -258,13 +258,12 @@ myGOcolours <- category2colour(unique(myGenes$GOAid),
                                col = mySpect)
 
 
-
 # Add each gene to the list:
 
 for (i in 1:nrow(myGenes)) {
 
   # The centre of the rectangle is placed on the circle
-  # returns x, y, and rotation angle
+  # coord2circle() returns x, y, and rotation angle
   circDat <- coord2circle(mean(c(myGenes$start[i], myGenes$end[i])),
                           CHR20LENGTH,
                           CHR20ORI,
@@ -377,14 +376,14 @@ mySVG <- c(mySVG, SVGdefinePage(Xpx, Ypx))
 for (i in 1:length(myShapes)) {
 
   mySVG <- c(mySVG, SVGrenderElement(myShapes[[i]],
-                                     s = sXY,
-                                     t = tXY,
+                                     sc = sXY,
+                                     tr = tXY,
                                      Y = Ypx))
 }
 
 
 # ===   3.5.4  Write SVG footer
-mySVG <- c(mySVG, "</svg>")
+mySVG <- c(mySVG, SVGfooter())
 
 
 # =    4  FINISH  ==============================================================

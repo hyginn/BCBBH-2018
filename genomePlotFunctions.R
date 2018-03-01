@@ -16,21 +16,22 @@
 #TOC>
 #TOC>   Section  Title                                      Line
 #TOC> ----------------------------------------------------------
-#TOC>   1        PACKAGES                                     38
-#TOC>   2        FUNCTIONS TO INITIALIZE DATA STRUCTURES      46
-#TOC>   3        ANNOTATION FUNCTIONS                         49
-#TOC>   4        LAYOUT FUNCTIONS                             63
-#TOC>   4.1        ang2rad()                                 111
-#TOC>   4.2        coord2circle()                            141
-#TOC>   5        PLOTTING FUNCTIONS                          175
-#TOC>   5.1        SVGheader()                               177
-#TOC>   5.2        SVGdefinePage()                           203
-#TOC>   5.3        SVGdrawCircle()                           234
-#TOC>   5.4        SVGdrawText()                             268
-#TOC>   5.5        SVGdrawLine()                             306
-#TOC>   5.6        SVGdrawRect()                             339
-#TOC>   5.7        st()                                      383
-#TOC>   5.8        SVGrenderElement()                        417
+#TOC>   1        PACKAGES                                     39
+#TOC>   2        FUNCTIONS TO INITIALIZE DATA STRUCTURES      47
+#TOC>   3        ANNOTATION FUNCTIONS                         50
+#TOC>   4        LAYOUT FUNCTIONS                             64
+#TOC>   4.1        ang2rad()                                 108
+#TOC>   4.2        coord2circle()                            126
+#TOC>   5        PLOTTING FUNCTIONS                          154
+#TOC>   5.1        SVGheader()                               156
+#TOC>   5.2        SVGdefinePage()                           174
+#TOC>   5.3        SVGdrawCircle()                           198
+#TOC>   5.4        SVGdrawText()                             229
+#TOC>   5.5        SVGdrawLine()                             267
+#TOC>   5.6        SVGdrawRect()                             294
+#TOC>   5.7        st()                                      342
+#TOC>   5.8        SVGrenderElement()                        368
+#TOC>   5.9        SVGfooter()                               434
 #TOC>
 #TOC> ==========================================================================
 
@@ -88,10 +89,6 @@ category2colour <- function(Cs,
   # Value:
   #     A named character vector of colour values, where the names are
   #     the elements of Cs.
-  #
-  # Notes:
-  #     <...>
-  #
 
   fCol <- colorRampPalette(colors = col,
                            bias = B,
@@ -110,27 +107,15 @@ category2colour <- function(Cs,
 
 # ==   4.1  ang2rad()  =========================================================
 ang2rad <- function(a) {
-  # Purpose:
-  #    Convert a rotation angle in degrees from vertical in clockwise direction
-  #    to radians.
-  #
   # Description:
-  #     <describe purpose...>
+  #    Convert a rotation angle a in degrees from vertical in clockwise
+  #    direction to radians.
   #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     a:   num   rotation angle in degrees from 0 at (0, 1), clockwise.
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
-
+  #     An angle in radians.
 
   x <- ((2 * a) / 360) * pi  # degrees to radians
   x <- -x                    # change direction of rotation
@@ -140,28 +125,22 @@ ang2rad <- function(a) {
 
 # ==   4.2  coord2circle()  ====================================================
 coord2circle <- function(coord, l, ori, rad) {
-  # Purpose:
+  # Description:
   #     Convert linear coordinates on a line of length l to
   #     positions on a circle centred on ori with radius rad. Return the
   #     coordinates and the rotation angle. We define 0° to be at the top, and
   #     the positive direction is clockwise.
   #
-  # Description:
-  #     <describe purpose...>
-  #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     coord:   num   chromosome coordinates
+  #     l:       num   chromosome length
+  #     ori:     num   (x, y) coordinates of the circle centre
+  #     rad:     num   circle radius
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     A three element vector of (x, y) coordinates on the circle and the
+  #     rotation angle in degree, where 0 is a vertical line and the
+  #     direction of rotation is clockwise.
 
   rot <- (coord / l) * 360
   th  <- ang2rad(rot)
@@ -178,21 +157,13 @@ coord2circle <- function(coord, l, ori, rad) {
 SVGheader <- function() {
   #
   # Description:
-  #     <describe purpose...>
+  #     Write a SVG header.
   #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     None
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG header
 
   s <-    "<?xml version=\"1.0\" standalone=\"no\"?>"
   s[2] <- paste("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"",
@@ -204,21 +175,14 @@ SVGheader <- function() {
 SVGdefinePage <- function(w, h) {
   #
   # Description:
-  #     <describe purpose...>
+  #     Define pahe size and viewbox
   #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     w:   Page width (pixels)
+  #     h:   Page height (pixels)
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG page definitions.
 
   s <- paste("<svg",
              sprintf("width=\"%f\"",  w),
@@ -238,21 +202,18 @@ SVGdrawCircle <- function(cx, cy, r,
                           sw = 1.0) {
   #
   # Description:
-  #     <describe purpose...>
+  #     Write SVG code to draw a circle.
   #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     cx      num   x coordinate of centre
+  #     cy      num   y coordinate of centre
+  #     r       num   radius
+  #     fill    char  fill colour, default white
+  #     stroke  char  outline colour, default black
+  #     sw      char  stroke width, default 1.0 point
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG commands.
 
   s <- paste( sprintf("<circle cx=\"%f\"", cx),
               sprintf("cy=\"%f\"", cy),
@@ -269,25 +230,25 @@ SVGdrawCircle <- function(cx, cy, r,
 SVGdrawText <- function(x, y,
                         font,
                         size,
-                        fill = "#FFFFFF",
+                        fill = "#000000",
                         text) {
   #
   # Description:
-  #     <describe purpose...>
+  #     Write SVG code to place text.
   #
   # Arguments:
-  #     <name>:   <type>   <description
+  #     x       num   x coordinate of centre
+  #     y       num   y coordinate of centre
+  #     font    char  a valid font-family
+  #     size    num   font-size in points
+  #     fill    char  fill colour, default black
+  #     text    char  the text string
   #
   # Details:
-  #     <description, notes, see-also ...>
+  #     The text is centred on (x, y).
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG commands.
 
   s <- paste( sprintf("<text x=\"%f\"", x),
               sprintf("y=\"%f\"", y),
@@ -305,25 +266,19 @@ SVGdrawText <- function(x, y,
 
 # ==   5.5  SVGdrawLine()  =====================================================
 SVGdrawLine <- function(x1, y1, x2, y2,
-                        stroke = "#FFFFFF",
+                        stroke = "#000000",
                         sw = 1.0) {
   #
   # Description:
-  #     <describe purpose...>
+  #     Write SVG code to place text.
   #
   # Arguments:
-  #     <name>:   <type>   <description
-  #
-  # Details:
-  #     <description, notes, see-also ...>
+  #     x1, y1, x2, y2  num   start and end coordinates of the line
+  #     stroke    char  line colour, default black
+  #     sw        num  stroke width, default 1.0 point
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG commands.
 
   s <- paste( sprintf("<line x1=\"%f\"", x1),
               sprintf("y1=\"%f\"", y1),
@@ -343,21 +298,22 @@ SVGdrawRect <- function(x, y, w, h, ang,
                         sw = 0.0) {
   #
   # Description:
-  #     <describe purpose...>
+  #     Write SVG code to draw a rectangle.
   #
   # Arguments:
-  #     <name>:   <type>   <description
+  #     x, y    num   coordinates of centre
+  #     w, h    num   rectangle width and height
+  #     ang     num   rotation angle of the rectangle
+  #     fill    char  fill colour, default white
+  #     stroke  char  outline colour, default: no outline
+  #     sw      num   stroke width, default 1.0 point
   #
   # Details:
-  #     <description, notes, see-also ...>
+  #     The rectangle is contained in a <g></g> element that defines the
+  #     rotation by ang degrees, clockwise, as a transformation.
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     String. SVG commands.
 
   crX <- x + (w / 2)
   crY <- y + (h / 2)
@@ -385,30 +341,22 @@ SVGdrawRect <- function(x, y, w, h, ang,
 
 # ==   5.7  st()  ==============================================================
 st <- function(xy, s, t, yPage) {
-  # simple scaling and tranlation - but could be extended to rotations,
-  # perspective skews, projections etc. etc.
-  # xy is a two-element vector
-  # s and t are scalars
-  # yPage is the height of the page
-  #
-  # Note that the SVG coordinate system has its origin top-left.
-  # #
   # Description:
-  #     <describe purpose...>
+  #   Simple scaling and translation
   #
   # Arguments:
-  #     <name>:   <type>   <description
+  #   xy:    num  two-element vector of the coordinates to be scaled
+  #   s:     num  scale
+  #   t:     num  two element tranlation vector
+  #   yPage  num  height of the page in pixel
   #
   # Details:
-  #     <description, notes, see-also ...>
+  #   Note that the SVG coordinate system has its origin top-left.
+  #   This functioncould be extended to rotations,
+  #   perspective skews, projections etc. etc.
   #
   # Value:
-  #     <type, structure etc. of the single return value. Or:
-  #     NA - function is invoked for its side effect of ... <describe>. >
-  #
-  # Notes:
-  #     <...>
-  #
+  #     transformed coordinate pair.
 
   xy <- s * xy                      # scale
   xy <- c(xy[1], yPage - xy[2])     # flip
@@ -418,24 +366,25 @@ st <- function(xy, s, t, yPage) {
 
 
 # ==   5.8  SVGrenderElement()  ================================================
-#
-# Description:
-#     <describe purpose...>
-#
-# Arguments:
-#     <name>:   <type>   <description
-#
-# Details:
-#     <description, notes, see-also ...>
-#
-# Value:
-#     <type, structure etc. of the single return value. Or:
-#     NA - function is invoked for its side effect of ... <describe>. >
-#
-# Notes:
-#     <...>
-#
+
 SVGrenderElement <- function(li, sc, tr, Y) {
+  #
+  # Description:
+  #     Render a shape to an SVG plot command
+  #
+  # Arguments:
+  #     li:   list element that contains the shape type and attributes
+  #     sc:   num   scale
+  #     tr:   num   translation vector
+  #     Y:    num   page height (in pixel)
+  #
+  # Details:
+  #     This sends the shapes to the appropriate SVG function with a minimum
+  #     of preprocessing. See actual function calls for details.
+  #
+  # Value:
+  #     String. SVG commands.
+
   if (li$type == "circle") {
     xy <- st(li$centre, sc, tr, Y)
     s <- SVGdrawCircle(cx = xy[1],
@@ -482,13 +431,20 @@ SVGrenderElement <- function(li, sc, tr, Y) {
 
 
 
+# ==   5.9  SVGfooter()  =======================================================
+SVGfooter <- function() {
+  #
+  # Description:
+  #     Return closing tag for svg file.
+  #
+  # Arguments:
+  #     None
+  #
+  # Value:
+  #     The string "</svg>"
 
-
-
-
-
-
-
+  return("</svg>")
+}
 
 
 # [END]
