@@ -5,8 +5,8 @@
 #
 #           Currently: linear data from HGNC only
 #
-# Version:  0.3.1
-# Date:     2018 03 03
+# Version:  0.4
+# Date:     2018 03 04
 # Author:   Boris Steipe <boris.steipe@utoronto.ca>
 #
 # Dependencies:
@@ -15,6 +15,9 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#
+#   0.4     Major effort to properly parse GO and annotate all Chr 20
+#              genes with the most informative GOslim term
 #   0.3.1   Add gene type to basic data. Use HGNC symbols as authoritative
 #           source for gene annotations
 #   0.3     Remove BioMart GO data from basic gene data, prepare separate
@@ -30,19 +33,31 @@
 
 
 #TOC> ==========================================================================
-#TOC> 
-#TOC>   Section  Title                                     Line
-#TOC> ---------------------------------------------------------
-#TOC>   1        PARAMETERS                                  45
-#TOC>   2        PACKAGES                                    57
-#TOC>   3        HGNC SYMBOLS AND CROSSREFERENCES            72
-#TOC>   4        BIOMART GENE ANNOTATIONS                   127
-#TOC>   5        STRING DATA                                171
-#TOC> 
+#TOC>
+#TOC>   Section  Title                                              Line
+#TOC> ------------------------------------------------------------------
+#TOC>   1        INIT                                                 57
+#TOC>   1.1        Parameters                                         60
+#TOC>   1.2        Packages                                           72
+#TOC>   1.3        Functions                                          86
+#TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                    115
+#TOC>   3        BIOMART GENE ANNOTATIONS                            170
+#TOC>   4        STRING DATA                                         214
+#TOC>   5        GO DATA                                             261
+#TOC>   5.1        GO annotations (for Chr 20 genes)                 274
+#TOC>   5.2        Analyze the GO graph                              329
+#TOC>   5.2.1          Parse GO term definitions and edges           342
+#TOC>   5.2.2          Compile annotation counts                     424
+#TOC>   5.3        Fetch GOslim terms                                520
+#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms        538
+#TOC>
 #TOC> ==========================================================================
 
 
-# =    1  PARAMETERS  ==========================================================
+# =    1  INIT  ================================================================
+
+
+# ==   1.1  Parameters  ========================================================
 
 # Paths to the directories that contains the various data sets. The source files
 # are described below, but some of them are quite large so we are not
@@ -54,7 +69,7 @@ STRINGDIR  <- "./"
 GODIR      <- "./"
 
 
-# =    2  PACKAGES  ============================================================
+# ==   1.2  Packages  ==========================================================
 # Load all required packages.
 
 if (!require(readr, quietly=TRUE)) {
@@ -68,8 +83,36 @@ if (!require(stringr, quietly=TRUE)) {
 }
 
 
+# ==   1.3  Functions  =========================================================
 
-# =    3  HGNC SYMBOLS AND CROSSREFERENCES  ====================================
+# Utility functions ...
+
+# Some of the data sets we process are quite large. A progress bar tells us
+# how we are doing ...
+pBar <- function(i, l, nCh = 50) {
+  # Draw a progress bar in the console
+  # i: the current iteration
+  # l: the total number of iterations
+  # nCh: width of the progress bar
+  ticks <- round(seq(1, l-1, length.out = nCh))
+  if (i < l) {
+    if (any(i == ticks)) {
+      p <- which(i == ticks)[1]  # use only first, in case there are ties
+      p1 <- paste(rep("#", p), collapse = "")
+      p2 <- paste(rep("-", nCh - p), collapse = "")
+      cat(sprintf("\r|%s%s|", p1, p2))
+      flush.console()
+    }
+  }
+  else { # done
+    cat("\n")
+  }
+}
+
+
+
+
+# =    2  HGNC SYMBOLS AND CROSSREFERENCES  ====================================
 
 # The HGNC (Human Gene Nomeclature Committee) is the authoritative source for
 # recognized genes. Source data is downloaded from the custom download page
@@ -124,7 +167,7 @@ Chr20GeneData$type <- gsub("RNA, transfer",
 
 
 
-# =    4  BIOMART GENE ANNOTATIONS  ============================================
+# =    3  BIOMART GENE ANNOTATIONS  ============================================
 
 
 # Read file obtained via custom download from ensembl biomart
@@ -168,7 +211,7 @@ for (i in 1:nrow(Chr20GeneData)) {
 
 
 
-# =    5  STRING DATA  =========================================================
+# =    4  STRING DATA  =========================================================
 
 # Source data was downloaded from STRING database via organism specific
 # download.
@@ -212,6 +255,342 @@ Chr20funcIntx$b <- ENS2symMap[Chr20funcIntx$b]
 
 # Done
 write_tsv(Chr20funcIntx, path = "Chr20funcIntx.tsv")
+
+
+
+# =    5  GO DATA  =============================================================
+
+# We analyze GO annotations to find the most informative
+# GOslim term for each gene. We proceed in two steps:
+#  - first we fetch all GOA annotations for Chr 20 genes.
+#  - Then we analyze the GOslim graph, split it into the three component
+#    ontologies, and determine the number of genes annotated to each term
+#    and its children. This allows us to pick the most informative term
+#    (least number of annotations) for each gene. We add that term to the
+#    Gene data table.
+
+
+
+# ==   5.1  GO annotations (for Chr 20 genes)  =================================
+
+# Source data is "goa_human.gaf" (74.5 MB) from
+# ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/HUMAN/
+#
+
+
+tmp <- read_tsv(paste0(GODIR, "goa_human.gaf"),
+                comment = "!",
+                col_names = c("DB",
+                              "DB_Object_ID",
+                              "Symbol",                 # Gene symbol
+                              "Qualifier",
+                              "GO_ID",                  # GO ID
+                              "DB_Reference",
+                              "Evidence_Code",
+                              "With_(or)_From",
+                              "Aspect",                 # GO Ontology
+                              "DB_Object_Name",
+                              "DB_Object_Synonym",
+                              "DB_Object_Type",
+                              "Taxon",
+                              "Date",
+                              "Assigned_By",
+                              "Annotation_Extension",
+                              "Gene_Product_Form_ID"
+                ))  # 440,931 rows
+
+tmp <- tmp[tmp$Taxon == "taxon:9606", ]  # just to make sure (440,395)
+
+# subset symbol, GO ID and "Aspect" columns (Aspect is C, F, or P for cellular
+# Component, molecular Function, or biological Process.)
+tmp <- tmp[ , c("Symbol", "GO_ID", "Aspect")]
+
+# Many of these are redundant, due to different sources. We assign every
+# row a key, and remove duplicates
+
+tmp$key <- sprintf("%s|%s|%s",
+                      tmp$Symbol,
+                      tmp$GO_ID,
+                      tmp$Aspect)
+
+GOannotations <- tmp[! duplicated(tmp$key), c("Symbol",
+                                              "GO_ID",
+                                              "Aspect")]  # 268,854 rows
+
+
+# subset terms annotated to symbols in Chr20GeneData
+GOdata$Chr20 <- GOannotations[GOannotations$Symbol %in% Chr20GeneData$sym,
+                              c("Symbol", "GO_ID", "Aspect")] # 7,353
+
+# how many Chr 20 genes are annotated?
+sum(Chr20GeneData$sym %in% Chr20GOdata$Symbol) # 503 of 529
+
+
+# ==   5.2  Analyze the GO graph  ==============================================
+
+# The GO graph is a DAG. Actually we have three DAGs: molecular function ("F"),
+# biological process ("P"), and cellular component ("C"). For gene annotation
+# purposes, we would like to group genes according to functional categories. GO
+# publishes a subset of terms of particular importance: GOslim terms. There may
+# be more than one GOslim term annotated to one gene, thus we would like to be
+# able to choose the most informative one. The most informative (most specific)
+# term is the one that has the smallest number of other genes annotated to it
+# and its descendants. To compile this information, we have to construct the
+# entire DAG, record all annotations, and then propagate annotations up the DAG
+# to its roots, recording the number of genes annotated to leaves at each step.
+
+# ===   5.2.1  Parse GO term definitions and edges
+
+# Source data is "go-basic.obo" from
+# http://geneontology.org/page/download-ontology  (33.8 MB)
+
+
+tmp <- readLines(paste0(GODIR, "go-basic.obo"))
+iTerms <- which(tmp == "[Term]")  # 47,136 terms
+iEnd <- which(tmp == "[Typedef]")[1] # Start of typedef section
+iTerms <- c(iTerms, iEnd)            # append to list of term indices
+
+# Initialize a data frame to hold the term definitions
+GOdefs <- data.frame(ID = character(),
+                     name = character(),
+                     namespace = character(),
+                     def = character(),
+                     stringsAsFactors = FALSE)
+
+# Initialize a data frame to hold the GO graph edges
+GOgraph <- data.frame(ID = character(),
+                      parentID = character(),
+                      namespace = character(),
+                      stringsAsFactors = FALSE)
+
+aspects <- c("C", "F", "P")    # map ontology name to single character
+names(aspects) <- c("cellular_component",
+                    "molecular_function",
+                    "biological_process")
+
+
+N <- length(iTerms) - 1
+for (i in 1:N) {       # for each GO term
+                       # (not very efficiently written, runs for a few minutes)
+  pBar(i, N)           # update progress bar
+
+  # fetch records for this term
+  first <- iTerms[i] + 1
+  last <- iTerms[i+1] - 1
+  term <- paste(first:last], collapse = "|")
+
+  if (grepl("is_obsolete: true", term)) {
+    next
+  }
+
+  # parse information
+  thisID        <- str_match_all(term, "^id: (GO:\\d+)\\|")[[1]][ ,2]
+  thisName      <- str_match_all(term, "\\|name: (.+?)\\|")[[1]][ ,2]
+  thisNamespace <- str_match_all(term, "\\|namespace: (.+?)\\|")[[1]][ ,2]
+  thisNamespace <- as.character(aspects[thisNamespace])  # make single character
+  thisDef       <- str_match_all(term, "\\|def: \"(.+?)\"")[[1]][ ,2]
+  m <- str_match_all(term, "\\|is_a: (GO:\\d+) ")[[1]]
+  if (length(m) > 0) {
+    theseParents  <- m[ ,2]
+  } else {
+    theseParents <- paste(thisNamespace, "root")
+  }
+
+  GOdefs <- rbind(GOdefs,   # add term to data frame
+                  data.frame(ID = thisID,
+                             name = thisName,
+                             namespace = thisNamespace,
+                             def = thisDef,
+                             stringsAsFactors = FALSE))
+
+  nParents <- length(theseParents)      # add GO graph edges to data frame
+  GOgraph <- rbind(GOgraph,
+                   data.frame(ID = rep(thisID, nParents),
+                              parentID = theseParents,
+                              namespace = rep(thisNamespace, nParents),
+                              stringsAsFactors = FALSE))
+}
+
+rownames(GOdefs) <- GOdefs$ID
+
+# Here are the three root IDs
+GOgraph$ID[grep("root", GOgraph$parentID)]
+# "GO:0003674" "GO:0005575" "GO:0008150"
+GOdefs["GO:0003674",]
+GOdefs["GO:0005575",]
+GOdefs["GO:0008150",]
+
+
+# ===   5.2.2  Compile annotation counts
+
+# GO graphs are DAGs not trees, thus we can't simply
+# propagate counts up to the root, we have to keep track of the actual
+# annotated terms to avoid double-counting. We store terms in a list, genes in
+# a vector for each term, and whenever we add genes from descendants to a term,
+# we unique() the vector.
+
+GOgenes <- list()
+
+# Step 1: Compile cumulative gene lists for Go Terms
+N <- nrow(GOannotations)
+for (i in 1:N) {                                  # for each annotation
+  pBar(i, N)
+  thisID <- GOannotations$GO_ID[i]                # fetch term ...
+  thisGene <- GOannotations$Symbol[i]             # ... and gene
+  if (length(GOgenes[[thisID]]$genes) == 0) {     # initialize if new
+    GOgenes[[thisID]]$genes <- thisGene
+  } else {                                        # else add gene to vector
+    GOgenes[[thisID]]$genes <- c(GOgenes[[thisID]]$genes, thisGene)
+  }
+}
+
+# Make the gene lists unique
+N <- length(GOgenes)
+for (i in 1:N) {
+  pBar(i, N)
+  if (length(GOgenes[[i]]$genes) > 0) {
+    GOgenes[[i]]$genes <- unique(GOgenes[[i]]$genes)
+  }
+}
+
+# To compile counts for all nodes and their descendants, we begin at the leaf
+# nodes, propagate terms to their parents and remove them from consideration.
+# Then we find all new leaf nodes, and iterate until done.
+
+# Step 2: Propagate gene annotations to root nodes
+
+GOdefs$active <- TRUE  # add a column to flag active nodes
+
+nCycles <- 0  # always add a safetynet when running while() loops  :-)
+Nterms <- nrow(GOdefs)
+while (sum(GOdefs$active) > 0 && nCycles < 100) {
+  nCycles <- nCycles + 1
+  cat(sprintf("Cycle: %d, %d active terms.\n",
+              nCycles,
+              sum(GOdefs$active)))
+
+  for (i in 1:Nterms) {
+    pBar(i, Nterms)
+
+    # Identify leafs: a leaf is a node that is active, and not parent to
+    # other active node(s).
+
+    if (GOdefs$active[i] == TRUE) {
+
+      thisTerm <- GOdefs$ID[i]
+      # find all the node's active children
+
+      children <- GOgraph$ID[thisTerm == GOgraph$parentID]
+      sel <- which(GOdefs$ID %in% children)
+      activeChildren <- GOdefs$ID[which(GOdefs$active[sel])]
+
+      if (length(activeChildren) == 0) { # it's a leaf
+        # propagate annotated genes to parents if any exist
+        sel <- which(thisTerm == GOgraph$ID)
+        theseParents <- GOgraph$parentID[sel]
+        for (parent in theseParents) {
+          if (! grepl("root", parent)) {
+            GOgenes[[parent]]$genes  <- unique(c(GOgenes[[parent]]$genes,
+                                                 GOgenes[[thisTerm]]$genes))
+          }
+        }
+        # unset the "active" flag for this node
+        GOdefs[thisTerm, "active"] <- FALSE
+      }
+    }
+  }
+}
+
+# Size of GOgenes now: ~ 99 Mb
+
+# Step3: compile the actual counts
+
+GOdefs$counts <- 0
+N <- length(GOgenes)
+termNames <- names(GOgenes)
+for (i in 1:N) {
+  pBar(i, N)
+  GOdefs[termNames[i], "counts"] <- length(GOgenes[[i]]$genes)
+}
+
+# Remove unneeded columns.
+GOdefs <- GOdefs[ , c("ID", "name", "namespace", "def", "counts")]
+
+
+# ==   5.3  Fetch GOslim terms  ================================================
+
+# Source data is "goslim_generic.obo" (257 kb) from
+# http://geneontology.org/ontology/subsets/goslim_generic.obo
+#
+
+tmp <- readLines(paste0(GODIR, "goslim_generic.obo"))
+iTerms <- which(tmp == "[Term]")  # 149 terms
+
+GOslimIDs <- gsub("id: ", "", tmp[iTerms + 1])
+
+# confirm
+all(GOslimIDs %in% GOdefs$ID)
+
+# Write GOslim information to file:
+write_tsv(GOdefs[GOslimIDs, ], path = "Chr20GOslimData.tsv")
+
+
+# ==   5.4  Annotate Chr 20 Genes with unique GO terms  ========================
+
+
+# For each Chr 20 gene, define which GOslim terms it can be annotated to -
+# either annotated to the term, or one of its descendants
+
+GOslimChr20 <- data.frame(sym = character(),    # initialize
+                          GOslim_ID = character(),
+                          namespace = character(),
+                          stringsAsFactors = FALSE)
+
+N <- nrow(Chr20GeneData)
+for (i in 1:N) {   # add each symbol/term combination
+  pBar(i, N)
+
+  sym <- Chr20GeneData$sym[i]
+
+  for(term in GOslimIDs) {
+    if (any(GOgenes[[term]]$genes == sym)) {
+      GOslimChr20 <- rbind(GOslimChr20,
+                           data.frame(sym = sym,
+                                      GOslim_ID = term,
+                                      namespace = GOdefs[term, "namespace"],
+                                      stringsAsFactors = FALSE))
+    }
+  }
+}
+
+# 5,164 rows
+
+
+# Finally: define most informative GO term of each ontology as the term with the
+# smallest number of annotations to it.
+
+Chr20GeneData$GO_C <- NA
+Chr20GeneData$GO_F <- NA
+Chr20GeneData$GO_P <- NA
+
+for (thisNS in c("C", "F", "P")) {
+  thisCol <- paste0("GO_", thisNS)
+
+  for (i in 1:nrow(Chr20GeneData)) {
+    sel <- which(GOslimChr20$sym == Chr20GeneData$sym[i]  &
+                   GOslimChr20$namespace == thisNS)
+    if (length(sel) == 1) {
+      Chr20GeneData[i, thisCol] <- GOslimChr20$GOslim_ID[sel]
+    } else if (length(sel) > 1) {
+      # More than one GO term annotated in this ontology. Choose the
+      # one with the smallest number of gene counts (most specific).
+      xID <- GOslimChr20$GOslim_ID[sel]
+      xCounts <- GOdefs$counts[GOdefs$ID %in% xID]
+      bestTerm <- (xID[xCounts == min(xCounts)])[1] # choose the first element
+      Chr20GeneData[i, thisCol] <- bestTerm         #     in case of ties
+    }
+  }
+}
 
 
 
