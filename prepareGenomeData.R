@@ -35,7 +35,7 @@
 
 
 #TOC> ==========================================================================
-#TOC>
+#TOC> 
 #TOC>   Section  Title                                               Line
 #TOC> -------------------------------------------------------------------
 #TOC>   1        INIT                                                  62
@@ -45,17 +45,17 @@
 #TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                     123
 #TOC>   3        BIOMART GENE ANNOTATIONS                             178
 #TOC>   4        STRING DATA                                          224
-#TOC>   5        GO DATA                                              274
-#TOC>   5.1        GO annotations (for Chr 20 genes)                  295
-#TOC>   5.2        Analyze the GO graph                               350
-#TOC>   5.2.1          Parse GO term definitions and edges            363
-#TOC>   5.2.2          Compile annotation counts                      445
-#TOC>   5.3        Fetch GOslim terms                                 541
-#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms         559
-#TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               616
-#TOC>   7        HUMAN PROTEIN ATLAS DATA                             659
-#TOC>   8        FINISH                                               702
-#TOC>
+#TOC>   5        GO DATA                                              291
+#TOC>   5.1        GO annotations (for Chr 20 genes)                  312
+#TOC>   5.2        Analyze the GO graph                               367
+#TOC>   5.2.1          Parse GO term definitions and edges            380
+#TOC>   5.2.2          Compile annotation counts                      462
+#TOC>   5.3        Fetch GOslim terms                                 558
+#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms         576
+#TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               633
+#TOC>   7        HUMAN PROTEIN ATLAS DATA                             676
+#TOC>   8        FINISH                                               719
+#TOC> 
 #TOC> ==========================================================================
 
 
@@ -266,6 +266,23 @@ Chr20FuncIntx <- tmp[(tmp$a %in% names(ENS2symMap)) &
 Chr20FuncIntx$a <- ENS2symMap[Chr20funcIntx$a]
 Chr20FuncIntx$b <- ENS2symMap[Chr20funcIntx$b]
 
+# We treat this as an undirected graph, thus we remove duplicates.
+
+# Add a sorted key column
+
+Chr20FuncIntx$keys <- character(nrow(Chr20FuncIntx))
+for (i in 1:nrow(Chr20FuncIntx)) {
+  Chr20FuncIntx$keys[i] <- paste(sort(c(Chr20FuncIntx$a[i],
+                                        Chr20FuncIntx$b[i])),
+                                 collapse = ":")
+}
+
+# remove rows with duplicated keys
+Chr20FuncIntx <- Chr20FuncIntx[! duplicated(Chr20FuncIntx$keys), ]
+
+# remove unneeded column
+Chr20FuncIntx <- Chr20FuncIntx[ , c("a", "b", "score")]
+
 # Done
 write_tsv(Chr20FuncIntx, path = "Chr20FuncIntx.tsv")
 
@@ -360,7 +377,7 @@ sum(Chr20GeneData$sym %in% Chr20GOdata$Symbol) # 503 of 529
 # entire DAG, record all annotations, and then propagate annotations up the DAG
 # to its roots, recording the number of genes annotated to leaves at each step.
 
-# ===   5.2.1  Parse GO term definitions and edges
+# ===   5.2.1  Parse GO term definitions and edges       
 
 # Source data is "go-basic.obo" from
 # http://geneontology.org/page/download-ontology  (33.8 MB)
@@ -442,7 +459,7 @@ GOdefs["GO:0005575",]
 GOdefs["GO:0008150",]
 
 
-# ===   5.2.2  Compile annotation counts
+# ===   5.2.2  Compile annotation counts                 
 
 # GO graphs are DAGs not trees, thus we can't simply
 # propagate counts up to the root, we have to keep track of the actual

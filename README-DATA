@@ -9,9 +9,13 @@ The following datasets are provided:
                         set is a reduced list of general GO terms that is often
                         used for a broad classification of gene function.
 
- - Chr20GWAStraits.csv  Traits that have been annotated to regions spanned
+ - Chr20GWAStraits.tsv  Traits that have been annotated to regions spanned
                         by recognized genes on Chr 20, which were discovered
                         by GWAS (Genome Wide Association Studies).
+
+ - Chr20FuncIntx.tsv    The functional interaction network as defined by the
+                        STRING database containing all high-confidence
+                        edges in which both nodes are Chr 20 genes.
 
 
 Details
@@ -92,5 +96,15 @@ Chr20GWAStraits.tsv  tab-separated values: 1,739 rows, 2 columns (1)
     can be multiple traits annotated to a single gene.
 
 
+
+Chr20FuncIntx.tsv  tab-separated values: 282 rows, 3 columns
+=================
+
+  This data defines an undirected, weighted graph given as edges between
+  nodes a and b, with a score of round(1000 * p_interaction) [900, 999]:
+
+  a (chr)      HGNC gene symbol:  "RALGAPA2", "ESF1",  "ESF1",  "AURKA", ...
+  b (chr)      HGNC gene symbol:  "RALGAPB",  "DDX27", "NOP56", "NINL", ...
+  score (int)  1000 * probability: 948,       959,     940,     919, ...
 
 # [END]
