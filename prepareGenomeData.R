@@ -5,7 +5,7 @@
 #
 #           Currently: linear data from HGNC only
 #
-# Version:  0.5
+# Version:  1.0
 # Date:     2018 03 04
 # Author:   Boris Steipe <boris.steipe@utoronto.ca>
 #
@@ -16,6 +16,7 @@
 #
 # Version history:
 #
+#   1.0     ADD HPA (Human Protein Atlas) data; add comments on data sources
 #   0.5     Add GWAS data
 #   0.4     Major effort to properly parse GO and annotate all Chr 20
 #              genes with the most informative GOslim term
@@ -37,21 +38,23 @@
 #TOC> 
 #TOC>   Section  Title                                               Line
 #TOC> -------------------------------------------------------------------
-#TOC>   1        INIT                                                  59
-#TOC>   1.1        Parameters                                          62
-#TOC>   1.2        Packages                                            75
-#TOC>   1.3        Functions                                           89
-#TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                     118
-#TOC>   3        BIOMART GENE ANNOTATIONS                             173
-#TOC>   4        STRING DATA                                          217
-#TOC>   5        GO DATA                                              264
-#TOC>   5.1        GO annotations (for Chr 20 genes)                  277
-#TOC>   5.2        Analyze the GO graph                               332
-#TOC>   5.2.1          Parse GO term definitions and edges            345
-#TOC>   5.2.2          Compile annotation counts                      427
-#TOC>   5.3        Fetch GOslim terms                                 523
-#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms         541
-#TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               598
+#TOC>   1        INIT                                                  62
+#TOC>   1.1        Parameters                                          65
+#TOC>   1.2        Packages                                            80
+#TOC>   1.3        Functions                                           94
+#TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                     123
+#TOC>   3        BIOMART GENE ANNOTATIONS                             178
+#TOC>   4        STRING DATA                                          224
+#TOC>   5        GO DATA                                              274
+#TOC>   5.1        GO annotations (for Chr 20 genes)                  295
+#TOC>   5.2        Analyze the GO graph                               350
+#TOC>   5.2.1          Parse GO term definitions and edges            363
+#TOC>   5.2.2          Compile annotation counts                      445
+#TOC>   5.3        Fetch GOslim terms                                 541
+#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms         559
+#TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               616
+#TOC>   7        HUMAN PROTEIN ATLAS DATA                             659
+#TOC>   8        FINISH                                               702
 #TOC> 
 #TOC> ==========================================================================
 
@@ -63,13 +66,15 @@
 
 # Paths to the directories that contains the various data sets. The source files
 # are described below, but some of them are quite large so we are not
-# loading them into the repo.
-#
-HGNCDIR    <- "./"
-BIOMARTDIR <- "./"
-STRINGDIR  <- "./"
-GODIR      <- "./"
-GWASDIR    <- "./"
+# loading them into the repo. Download information is in the respective
+# script sections
+
+HGNCDIR    <- "./"   # Human Gene Nomenclature Committe
+BIOMARTDIR <- "./"   # Ensembl Biomart gene annotation
+STRINGDIR  <- "./"   # STRING functional interaction data
+GODIR      <- "./"   # Gene Ontology data
+GWASDIR    <- "./"   # Genome Wide Association Studies
+HPADIR     <- "./"   # Human Protein Atlas
 
 
 # ==   1.2  Packages  ==========================================================
@@ -172,6 +177,8 @@ Chr20GeneData$type <- gsub("RNA, transfer",
 
 # =    3  BIOMART GENE ANNOTATIONS  ============================================
 
+# The Ensembl Biomart system provides extensive annotations for genome-sequenced
+# model organisms.
 
 # Read file obtained via custom download from ensembl biomart
 # http://useast.ensembl.org/
@@ -215,6 +222,9 @@ for (i in 1:nrow(Chr20GeneData)) {
 
 
 # =    4  STRING DATA  =========================================================
+
+# STRING is a database of functional interactions. Interactions are scored
+# and made available as network edges.
 
 # Source data was downloaded from STRING database via organism specific
 # download.
@@ -262,6 +272,14 @@ write_tsv(Chr20funcIntx, path = "Chr20funcIntx.tsv")
 
 
 # =    5  GO DATA  =============================================================
+
+# GO (Gene Ontology) is a very large project that has undertaken to organize
+# biomolecular concepts into three separate ontologies (Cellular Component,
+# Molecular Function, and Biological Process), as well as annotating model
+# organism genes to those terms. GO data is large, complex, and has subtle
+# pitfalls, and parsing GO terms takes by far the most preprocessing in order to
+# map the information into simple per-gene annotations.
+
 
 # We analyze GO annotations to find the most informative
 # GOslim term for each gene. We proceed in two steps:
@@ -597,6 +615,9 @@ for (thisNS in c("C", "F", "P")) {
 
 # =    6  GWAS (GENOME WIDE ASSOCIATION STUDIES)  ==============================
 
+# The GWAS catalogue provides a compilation of results from studies that have
+# discovered significant genotype/phenotype associations in the human genome.
+
 # Source data is downloaded from the GWAS catalogue
 #  by selecting for Chr 20 associations https://www.ebi.ac.uk/gwas
 
@@ -635,10 +656,54 @@ CHr20GWAStraits <- c("sym\ttrait", CHr20GWAStraits)  # add header
 writeLines(CHr20GWAStraits, con = "CHr20GWAStraits.tsv")
 
 
+# =    7  HUMAN PROTEIN ATLAS DATA  ============================================
+
+# The Human Protein Atlas project is a long running program that annotates gene
+# products with their subcellular location, prognostic value, importance for
+# cancer, and tissue-specificity.
+
+# Source data was downloaded by selecting chromosome 20 as the search term at
+# protein atlas.org
+#
+# https://www.proteinatlas.org/search/chromosome:20 ()
+tmp <- read_tsv(paste0(HPADIR, "chromosome_20.tsv"))  # 531 rows
+
+sum(! (tmp$Gene %in% Chr20GeneData$sym)) # 17 not identical to current HGNC
+
+tmp <- as.data.frame(tmp[tmp$Gene %in% Chr20GeneData$sym, ])
+rownames(tmp) <- tmp$Gene
+
+# Subset to columns of greatest interest
+tmp <- tmp[ , c("Protein class",
+                "Subcellular location",
+                "Prognostic p-value",
+                "RNA cancer category",
+                "RNA tissue category",
+                "RNA TS TPM",
+                "TPM max in non-specific")]
+
+# add rows that are not in Chr20GeneData with all NA values
+missingSym <- Chr20GeneData$sym[! Chr20GeneData$sym %in% row.names(tmp)]
+tmp[missingSym, ] <- rep(NA, ncol(tmp))
+
+# add data to Chr20GeneData
+
+sym <- rownames(Chr20GeneData)
+
+Chr20GeneData$HPAclass          <- tmp[sym, "Protein class"]
+Chr20GeneData$HPAlocation       <- tmp[sym, "Subcellular location"]
+Chr20GeneData$HPAprognostic     <- tmp[sym, "Prognostic p-value"]
+Chr20GeneData$HPAcancerCat      <- tmp[sym, "RNA cancer category"]
+Chr20GeneData$HPAtissueCat      <- tmp[sym, "RNA tissue category"]
+Chr20GeneData$HPAspecifiExpr    <- tmp[sym, "RNA TS TPM"]
+Chr20GeneData$HPAnonSpecifiExpr <- tmp[sym, "TPM max in non-specific"]
 
 
-# ====  TESTS  =================================================================
-# ...
+# =    8  FINISH  ==============================================================
+
+# Gene data annotations completed ... write data frame to file:
+
+write_tsv(Chr20GeneData, path = "Chr20GeneData.tsv")
 
 
 # [END]
