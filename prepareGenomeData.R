@@ -5,7 +5,7 @@
 #
 #           Currently: linear data from HGNC only
 #
-# Version:  0.4
+# Version:  0.5
 # Date:     2018 03 04
 # Author:   Boris Steipe <boris.steipe@utoronto.ca>
 #
@@ -16,6 +16,7 @@
 #
 # Version history:
 #
+#   0.5     Add GWAS data
 #   0.4     Major effort to properly parse GO and annotate all Chr 20
 #              genes with the most informative GOslim term
 #   0.3.1   Add gene type to basic data. Use HGNC symbols as authoritative
@@ -33,24 +34,25 @@
 
 
 #TOC> ==========================================================================
-#TOC>
-#TOC>   Section  Title                                              Line
-#TOC> ------------------------------------------------------------------
-#TOC>   1        INIT                                                 57
-#TOC>   1.1        Parameters                                         60
-#TOC>   1.2        Packages                                           72
-#TOC>   1.3        Functions                                          86
-#TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                    115
-#TOC>   3        BIOMART GENE ANNOTATIONS                            170
-#TOC>   4        STRING DATA                                         214
-#TOC>   5        GO DATA                                             261
-#TOC>   5.1        GO annotations (for Chr 20 genes)                 274
-#TOC>   5.2        Analyze the GO graph                              329
-#TOC>   5.2.1          Parse GO term definitions and edges           342
-#TOC>   5.2.2          Compile annotation counts                     424
-#TOC>   5.3        Fetch GOslim terms                                520
-#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms        538
-#TOC>
+#TOC> 
+#TOC>   Section  Title                                               Line
+#TOC> -------------------------------------------------------------------
+#TOC>   1        INIT                                                  59
+#TOC>   1.1        Parameters                                          62
+#TOC>   1.2        Packages                                            75
+#TOC>   1.3        Functions                                           89
+#TOC>   2        HGNC SYMBOLS AND CROSSREFERENCES                     118
+#TOC>   3        BIOMART GENE ANNOTATIONS                             173
+#TOC>   4        STRING DATA                                          217
+#TOC>   5        GO DATA                                              264
+#TOC>   5.1        GO annotations (for Chr 20 genes)                  277
+#TOC>   5.2        Analyze the GO graph                               332
+#TOC>   5.2.1          Parse GO term definitions and edges            345
+#TOC>   5.2.2          Compile annotation counts                      427
+#TOC>   5.3        Fetch GOslim terms                                 523
+#TOC>   5.4        Annotate Chr 20 Genes with unique GO terms         541
+#TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               598
+#TOC> 
 #TOC> ==========================================================================
 
 
@@ -67,6 +69,7 @@ HGNCDIR    <- "./"
 BIOMARTDIR <- "./"
 STRINGDIR  <- "./"
 GODIR      <- "./"
+GWASDIR    <- "./"
 
 
 # ==   1.2  Packages  ==========================================================
@@ -339,7 +342,7 @@ sum(Chr20GeneData$sym %in% Chr20GOdata$Symbol) # 503 of 529
 # entire DAG, record all annotations, and then propagate annotations up the DAG
 # to its roots, recording the number of genes annotated to leaves at each step.
 
-# ===   5.2.1  Parse GO term definitions and edges
+# ===   5.2.1  Parse GO term definitions and edges       
 
 # Source data is "go-basic.obo" from
 # http://geneontology.org/page/download-ontology  (33.8 MB)
@@ -421,7 +424,7 @@ GOdefs["GO:0005575",]
 GOdefs["GO:0008150",]
 
 
-# ===   5.2.2  Compile annotation counts
+# ===   5.2.2  Compile annotation counts                 
 
 # GO graphs are DAGs not trees, thus we can't simply
 # propagate counts up to the root, we have to keep track of the actual
@@ -591,6 +594,46 @@ for (thisNS in c("C", "F", "P")) {
     }
   }
 }
+
+# =    6  GWAS (GENOME WIDE ASSOCIATION STUDIES)  ==============================
+
+# Source data is downloaded from the GWAS catalogue
+#  by selecting for Chr 20 associations https://www.ebi.ac.uk/gwas
+
+tmp <- read_tsv(paste0(GWASDIR,
+                       "gwas-2018-03-02-chr20_1-64444167.tsv"))   # 1,520 rows
+
+
+# retain only rows with correct Chr ID
+tmp <- tmp[tmp$CHR_ID == "20", ] # 1,507 rows
+
+x <- unique(tmp$`DISEASE/TRAIT`)
+
+# Filter traits where the reported CHR_POS falls between start and end of a
+# Chr 20 gene
+
+CHr20GWAStraits <- character()
+N <- nrow(Chr20GeneData)
+for (i in 1:N) {
+  pBar(i, N)
+  iTraits <- which(tmp$CHR_POS >= Chr20GeneData$start[i] &
+                  tmp$CHR_POS <= Chr20GeneData$end[i])
+  if (length(iTraits > 0)) {
+    traits <- tmp$`DISEASE/TRAIT`[iTraits]
+  } else {
+    traits <- "-"
+  }
+  CHr20GWAStraits <- c(CHr20GWAStraits, sprintf("%s\t%s",
+                                                Chr20GeneData$sym[i],
+                                                traits))
+}
+
+CHr20GWAStraits <- unique(CHr20GWAStraits)   # remove duplicates
+
+CHr20GWAStraits <- c("sym\ttrait", CHr20GWAStraits)  # add header
+
+writeLines(CHr20GWAStraits, con = "CHr20GWAStraits.tsv")
+
 
 
 
