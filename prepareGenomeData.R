@@ -35,7 +35,7 @@
 
 
 #TOC> ==========================================================================
-#TOC> 
+#TOC>
 #TOC>   Section  Title                                               Line
 #TOC> -------------------------------------------------------------------
 #TOC>   1        INIT                                                  62
@@ -55,7 +55,7 @@
 #TOC>   6        GWAS (GENOME WIDE ASSOCIATION STUDIES)               616
 #TOC>   7        HUMAN PROTEIN ATLAS DATA                             659
 #TOC>   8        FINISH                                               702
-#TOC> 
+#TOC>
 #TOC> ==========================================================================
 
 
@@ -259,15 +259,15 @@ tmp <- read_delim(paste0(STRINGDIR, "9606.protein.links.v10.5.txt"),
 tmp <- tmp[tmp$score >= 900, ]  # 547,620 rows of high-confidence edges
 
 # Extract edges where both genes are in the mapped Chr 20 genes
-Chr20funcIntx <- tmp[(tmp$a %in% names(ENS2symMap)) &
+Chr20FuncIntx <- tmp[(tmp$a %in% names(ENS2symMap)) &
                      (tmp$b %in% names(ENS2symMap)), ]  # 564 rows
 
 # Use ENS2symMap to translate ENSP IDs to HGNC symbols
-Chr20funcIntx$a <- ENS2symMap[Chr20funcIntx$a]
-Chr20funcIntx$b <- ENS2symMap[Chr20funcIntx$b]
+Chr20FuncIntx$a <- ENS2symMap[Chr20funcIntx$a]
+Chr20FuncIntx$b <- ENS2symMap[Chr20funcIntx$b]
 
 # Done
-write_tsv(Chr20funcIntx, path = "Chr20funcIntx.tsv")
+write_tsv(Chr20FuncIntx, path = "Chr20FuncIntx.tsv")
 
 
 
@@ -360,7 +360,7 @@ sum(Chr20GeneData$sym %in% Chr20GOdata$Symbol) # 503 of 529
 # entire DAG, record all annotations, and then propagate annotations up the DAG
 # to its roots, recording the number of genes annotated to leaves at each step.
 
-# ===   5.2.1  Parse GO term definitions and edges       
+# ===   5.2.1  Parse GO term definitions and edges
 
 # Source data is "go-basic.obo" from
 # http://geneontology.org/page/download-ontology  (33.8 MB)
@@ -442,7 +442,7 @@ GOdefs["GO:0005575",]
 GOdefs["GO:0008150",]
 
 
-# ===   5.2.2  Compile annotation counts                 
+# ===   5.2.2  Compile annotation counts
 
 # GO graphs are DAGs not trees, thus we can't simply
 # propagate counts up to the root, we have to keep track of the actual
@@ -633,7 +633,7 @@ x <- unique(tmp$`DISEASE/TRAIT`)
 # Filter traits where the reported CHR_POS falls between start and end of a
 # Chr 20 gene
 
-CHr20GWAStraits <- character()
+Chr20GWAStraits <- character()
 N <- nrow(Chr20GeneData)
 for (i in 1:N) {
   pBar(i, N)
@@ -644,16 +644,16 @@ for (i in 1:N) {
   } else {
     traits <- "-"
   }
-  CHr20GWAStraits <- c(CHr20GWAStraits, sprintf("%s\t%s",
+  Chr20GWAStraits <- c(Chr20GWAStraits, sprintf("%s\t%s",
                                                 Chr20GeneData$sym[i],
                                                 traits))
 }
 
-CHr20GWAStraits <- unique(CHr20GWAStraits)   # remove duplicates
+Chr20GWAStraits <- unique(Chr20GWAStraits)   # remove duplicates
 
-CHr20GWAStraits <- c("sym\ttrait", CHr20GWAStraits)  # add header
+Chr20GWAStraits <- c("sym\ttrait", Chr20GWAStraits)  # add header
 
-writeLines(CHr20GWAStraits, con = "CHr20GWAStraits.tsv")
+writeLines(Chr20GWAStraits, con = "Chr20GWAStraits.tsv")
 
 
 # =    7  HUMAN PROTEIN ATLAS DATA  ============================================
