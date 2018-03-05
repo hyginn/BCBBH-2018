@@ -695,7 +695,7 @@ Chr20GeneData$HPAlocation        <- tmp[sym, "Subcellular location"]
 Chr20GeneData$HPAprognostic      <- tmp[sym, "Prognostic p-value"]
 Chr20GeneData$HPAcancerCat       <- tmp[sym, "RNA cancer category"]
 Chr20GeneData$HPAtissueCat       <- tmp[sym, "RNA tissue category"]
-Chr20GeneData$HPAspecifiExpr     <- tmp[sym, "RNA TS TPM"]
+Chr20GeneData$HPAspecificExpr    <- tmp[sym, "RNA TS TPM"]
 Chr20GeneData$HPAnonSpecificExpr <- tmp[sym, "TPM max in non-specific"]
 
 
