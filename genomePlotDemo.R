@@ -4,7 +4,7 @@
 #           connections.
 #
 #
-# Version:  0.3
+# Version:  0.4
 # Date:     2018 02 28
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
@@ -14,6 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   0.4  Update for updated datafiles
 #   0.3  Bugfix in coordinate scaling to SVG coordinates for rectangles
 #   0.2  Improve abstractions and modularization, move functions to
 #        separate file.
@@ -56,10 +57,12 @@
 
 CHR20LENGTH   <- 64444167  # basepairs of the chromosome we are working with
 
-DATAFILE <- "chr20_data.tsv"  # Chromosome data input. See the script
-                              # prepareGenomeData.R for a description of the
-                              # contents, and the code that produces it from
-                              # database sources.
+DATAFILE <- "Chr20GeneData.tsv"  # Chromosome data input. See the script
+                                 # prepareGenomeData.R for a description of the
+                                 # contents, and the code that produces it from
+                                 # database sources.
+
+NACOLOUR <- "#AAAAAA"            # Neutral grey for NA attributes
 
 SVGFILE <- "test.svg"  # Filename for the output we produce
 
@@ -109,7 +112,7 @@ myGenes <- data.frame(sym = myData$sym,            # Gene symbols
                       start = myData$start,        # start
                       end = myData$end,            # end
                       strand = myData$strand,      # strand
-                      GOAid = myData$GOAid,        # GO annotation
+                      GOid = myData$GO_P,          # GO annotation for "Process"
                       stringsAsFactors = FALSE)
 
 # Relationship annotations: from <symbol> to <symbol>
@@ -138,26 +141,32 @@ myEdges <- data.frame(from = character(),
 for (i in 1:nrow(myGenes)){
   # for each gene, add an edge to all other genes with the same GO id.
   thisSym <- myGenes$sym[i]
-  thisGOid <- myGenes$GOAid[i]
+  thisGOid <- myGenes$GOid[i]
 
-  sel <- which(myGenes$GOAid == thisGOid) # all genes with this GO id
-  sel <- sel[sel != i] # remove the index of the original (no self-edge)
+  if (! is.na(thisGOid)) {
+    sel <- which(myGenes$GOid == thisGOid) # all genes with this GO id
+    sel <- sel[sel != i] # remove the index of the original (no self-edge)
 
-  myEdges <- rbind(myEdges, data.frame(from = rep(thisSym, length(sel)),
-                                       to = myGenes$sym[sel],
-                                       stringsAsFactors = FALSE))
+    myEdges <- rbind(myEdges, data.frame(from = rep(thisSym, length(sel)),
+                                         to = myGenes$sym[sel],
+                                         stringsAsFactors = FALSE))
+  }
 }
 
 
 
 # ===   3.3.2  Annotate relationship types:
 
-myEdges$type <- character(nrow(myEdges)) # add "type" column
+myEdges$type <- character(nrow(myEdges)) # Add a "type" column - this could
+                                         # be any kind of categorical data,
+                                         # in this demo we simply use the GO ID.
 
 for (i in 1:nrow(myEdges)){  # for each edge, add the GO id of the "from" gene.
+  # Note: we don't need to test for NA here, because we only used annotated
+  # genes to build the list.
 
   sel <- which(myGenes$sym == myEdges$from[i])[1]  # take first match
-  myEdges$type[i] <- myGenes$GOAid[sel]
+  myEdges$type[i] <- myGenes$GOid[sel]
 }
 
 
@@ -165,7 +174,11 @@ for (i in 1:nrow(myEdges)){  # for each edge, add the GO id of the "from" gene.
 
 # ===   3.3.3  Annotate relationship weights:
 
-wGOA <- linMap(table(myGenes$GOAid),
+# We can encode information in the edge thickness. In this demo, we draw
+# more specific (less frequently annotated) GO terms with a thicker line.
+
+
+wGOA <- linMap(table(myGenes$GOid),
                low = 0.99,
                high = 0.01) # map frequencies to weights
 
@@ -254,7 +267,7 @@ mySpect <- c("#f2003c",  # red
              "#8000D3",  # violet
              "#D0007F")  # red
 
-myGOcolours <- category2colour(unique(myGenes$GOAid),
+myGOcolours <- category2colour(sort(unique(myGenes$GOid)),
                                col = mySpect)
 
 
@@ -276,9 +289,18 @@ for (i in 1:nrow(myGenes)) {
   # Layout for genes: each gene will be drawn as a colored box, placed on the
   # circle and rotated appropriately. We store the (x, y) of the centre, as well
   # as width and height of the rectangle, and the angle through which it should
-  # be rotated. We use the colour for GO anotations we defined above. At this
-  # scale, a typical gene is about a hair's width. We draw the outline of the
-  # rectangle, with a thin line, to give it a minimum width for visibility.
+  # be rotated.
+
+  # We use the colour for GO anotations we defined above.
+  myFill <- myGOcolours[myGenes$GOid[i]]
+
+  if (is.na(myFill)) {
+    myFill <- "#AAAAAA"   # light grey for unannotaded genes
+  }
+
+  # At this scale, a typical gene is about a hair's width. We draw the outline
+  # of the rectangle, with a thin line, to give it a minimum width for
+  # visibility.
 
   # Define a rectangle shape with these parameters:
   myShapes[[length(myShapes) + 1]] <- list(type = "rect",
@@ -286,8 +308,8 @@ for (i in 1:nrow(myGenes)) {
                                            w = width,
                                            h = height,
                                            ang = circDat[3],
-                                           fill = myGOcolours[myGenes$GOAid[i]],
-                                           stroke = myGOcolours[myGenes$GOAid[i]],
+                                           fill = myFill,
+                                           stroke = myFill,
                                            sw = 0.5)  # points
 }
 

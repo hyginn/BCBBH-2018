@@ -3,8 +3,8 @@
 # Purpose:  Demo a genome plot of genes on a line.
 #
 #
-# Version:  0.1
-# Date:     2018 02 28
+# Version:  0.2
+# Date:     2018 03 04
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -13,6 +13,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   0.2  Updated gene data
 #   0.1  Derived from genomePlotDemo.R
 #
 # ToDo:
@@ -49,10 +50,12 @@
 
 CHR20LENGTH   <- 64444167  # basepairs of the chromosome we are working with
 
-DATAFILE <- "chr20_data.tsv"  # Chromosome data input. See the script
-                              # prepareGenomeData.R for a description of the
-                              # contents, and the code that produces it from
-                              # database sources.
+DATAFILE <- "Chr20GeneData.tsv"  # Chromosome data input. See the script
+                                 # prepareGenomeData.R for a description of the
+                                 # contents, and the code that produces it from
+                                 # database sources.
+
+NACOLOUR <- "#AAAAAA"            # Neutral grey for NA attributes
 
 SVGFILE <- "test.svg"  # Filename for the output we produce
 
@@ -100,7 +103,7 @@ myGenes <- data.frame(sym = myData$sym,            # Gene symbols
                       start = myData$start,        # start
                       end = myData$end,            # end
                       strand = myData$strand,      # strand
-                      GOAid = myData$GOAid,        # GO annotation
+                      GOid = myData$GO_P,          # GO annotation for "Process"
                       stringsAsFactors = FALSE)
 
 
@@ -185,7 +188,7 @@ mySpect <- c("#f2003c",  # red
              "#8000D3",  # violet
              "#D0007F")  # red
 
-myGOcolours <- category2colour(unique(myGenes$GOAid),
+myGOcolours <- category2colour(sort(unique(myGenes$GOid)),
                                col = mySpect)
 
 
@@ -201,9 +204,16 @@ for (i in 1:nrow(myGenes)) {
               0.0 + (myGenes$strand[i] * thisHeight * 0.5) )                # y
   thisWidth <- abs(myGenes$start[i] - myGenes$end[i]) / CHR20LENGTH
 
-  # We use the colour for GO anotations we defined above. At this
-  # scale, a typical gene is about a hair's width. We draw the outline of the
-  # rectangle, with a thin line, to give it a minimum width for visibility.
+  # We use the colour for GO anotations we defined above.
+  myFill <- myGOcolours[myGenes$GOid[i]]
+
+  if (is.na(myFill)) {
+    myFill <- NACOLOUR
+  }
+
+  # At this scale, a typical gene is about a hair's width. We draw the outline
+  # of the rectangle, with a thin line, to give it a minimum width for
+  # visibility.
 
   # Define a rectangle shape with these parameters:
   myShapes[[length(myShapes) + 1]] <- list(type = "rect",
@@ -211,8 +221,8 @@ for (i in 1:nrow(myGenes)) {
                                            w = thisWidth,
                                            h = thisHeight,
                                            ang = 0,
-                                           fill = myGOcolours[myGenes$GOAid[i]],
-                                           stroke = myGOcolours[myGenes$GOAid[i]],
+                                           fill = myFill,
+                                           stroke = myFill,
                                            sw = 0.5)  # points
 }
 
