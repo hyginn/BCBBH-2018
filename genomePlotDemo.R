@@ -4,8 +4,8 @@
 #           connections.
 #
 #
-# Version:  0.4
-# Date:     2018 02 28
+# Version:  0.5
+# Date:     2018 03 05
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -14,6 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   0.5  Added an Introduction section and more comments
 #   0.4  Update for updated datafiles
 #   0.3  Bugfix in coordinate scaling to SVG coordinates for rectangles
 #   0.2  Improve abstractions and modularization, move functions to
@@ -28,36 +29,74 @@
 
 #TOC> ==========================================================================
 #TOC>
-#TOC>   Section  Title                             Line
-#TOC> -------------------------------------------------
-#TOC>   1        PARAMETERS                          52
-#TOC>   2        PACKAGES AND FUNCTIONS              75
-#TOC>   3        PROCESS                             84
-#TOC>   3.1        READ SOURCE DATA                  90
-#TOC>   3.2        INITIALIZE DATA STRUCTURES        98
-#TOC>   3.3        ANNOTATE                         122
-#TOC>   3.3.1        Annotate relationships:        136
-#TOC>   3.3.2        Annotate relationship types:   153
-#TOC>   3.3.3        Annotate relationship weights: 166
-#TOC>   3.4        LAYOUT                           182
-#TOC>   3.5        PLOT                             320
-#TOC>   3.5.1        Compute scale and translation  323
-#TOC>   3.5.2        Write SVG header               369
-#TOC>   3.5.3        Render all elements            374
-#TOC>   3.5.4        Write SVG footer               385
-#TOC>   4        FINISH                             389
+#TOC>   Section  Title                                   Line
+#TOC> -------------------------------------------------------
+#TOC>   1        INTRODUCTION                              54
+#TOC>   2        PARAMETERS                                92
+#TOC>   3        PACKAGES AND FUNCTIONS                   117
+#TOC>   4        PROCESS                                  126
+#TOC>   4.1        READ SOURCE DATA                       132
+#TOC>   4.2        INITIALIZE DATA STRUCTURES             141
+#TOC>   4.3        ANNOTATE                               182
+#TOC>   4.3.1          Annotate relationship types:       194
+#TOC>   4.3.2          Annotate relationship weights:     211
+#TOC>   4.4        LAYOUT                                 231
+#TOC>   4.5        PLOT                                   378
+#TOC>   4.5.1          Compute scale and translation      381
+#TOC>   4.5.2          Write SVG header                   427
+#TOC>   4.5.3          Render all elements                432
+#TOC>   4.5.4          Write SVG footer                   443
+#TOC>   5        FINISH                                   447
 #TOC>
 #TOC> ==========================================================================
 
 
-# =    1  PARAMETERS  ==========================================================
+# =    1  INTRODUCTION  ========================================================
+
+# You should familiarize yourself with genomePlotBasic.R before you work though
+# this script - this script provides an extension to the basic workflow. Genes
+# are plotted on a circular chromosome, and edges are added between genes that
+# share a GO annotation from the biological process GOslim ontology. Further
+# extensions of the code are provided in genomePlotIntermediate.R (There is no
+#  "advanced" version - that would be your code).
+
+# The code proceeds through five steps:
+
+#  1 -  Read the source data:
+#         Just like in genomePlotBasic.R a single data file containing gene
+#         annotations is read into a data frame.
+#
+#  2 -  Initialize data structures:
+#         In this step, information objects are defined. In this demo we define
+#         gene information in a data frame, just like we did in
+#         genomePlotBasic.R.  Then we define edges between
+#         genes that are annoatetd to the same GO term.
+#
+#  3 -  Annotate:
+#         genomePlotBasic.R used only data that was read from the source file.
+#         In this demo, we compute annotations for relationships. Each
+#         relationship gets a category, and a weight.
+#
+#  4 -  Layout:
+#         genomePlotBasic.R mapped genes to a linear chromosome. This script
+#         plots each gene as a coloured rectangle on a circle, and draws lines
+#         for each relationship that we have defined above.
+#
+#  5 -  Plot:
+#         The plotting step is very similar to genomePlotBasic.R, except for
+#         a bit of code to collect the boundaries of the shapes we will draw
+#         in order to scale our plot into the available window.
+
+
+
+# =    2  PARAMETERS  ==========================================================
 
 # Code should not contain "magic numbers". Constants that we need are
 # defined and commented here.
 
 CHR20LENGTH   <- 64444167  # basepairs of the chromosome we are working with
 
-DATAFILE <- "Chr20GeneData.tsv"  # Chromosome data input. See the script
+DATAFILE <- "Chr20GeneData.tsv"  # Chromosome data input. See README-DATA and
                                  # prepareGenomeData.R for a description of the
                                  # contents, and the code that produces it from
                                  # database sources.
@@ -75,7 +114,7 @@ RESOLUTION <- 150                  # pixels per 2.54 cm
 
 
 
-# =    2  PACKAGES AND FUNCTIONS  ==============================================
+# =    3  PACKAGES AND FUNCTIONS  ==============================================
 #
 # All required packages and functions are loaded from the source file below.
 # You can inspect/copy/modify the source code there.
@@ -84,30 +123,30 @@ source("genomePlotFunctions.R")
 
 
 
-# =    3  PROCESS  =============================================================
+# =    4  PROCESS  =============================================================
 
 # This demo code will plot genes as rectangles on a circle, color the boxes, and
 # connect genes that share the same function category with a line.
 
 
-# ==   3.1  READ SOURCE DATA  ==================================================
+# ==   4.1  READ SOURCE DATA  ==================================================
 
 # read_tsv() is from the readr package. It is similar to base R's read.delim()
-# function, but more modern.
+# function, but more modern. Note that it returns a "tibble" which is similar
+# but not identical to a data frme.
 
 myData <- read_tsv(DATAFILE)
 
 
-# ==   3.2  INITIALIZE DATA STRUCTURES  ========================================
+# ==   4.2  INITIALIZE DATA STRUCTURES  ========================================
 
 # There are many possibilities to store the data for the objects we will analyze
 # and draw. Here we take a very simple approach and store gene-level data in one
-# data frame, relationship data in another data frame. We start with minimal
-# data but will add a few data columns during annotation.
+# data frame, relationship data in another data frame. Gene level data is
+# populated directly from the source data, relationship data (edges) are
+# computed from the gene data.
 
-N <- nrow(myData)
-
-# Entity annotations: data for each gene
+# Entities and attributes: data for each gene
 myGenes <- data.frame(sym = myData$sym,            # Gene symbols
                       start = myData$start,        # start
                       end = myData$end,            # end
@@ -115,31 +154,14 @@ myGenes <- data.frame(sym = myData$sym,            # Gene symbols
                       GOid = myData$GO_P,          # GO annotation for "Process"
                       stringsAsFactors = FALSE)
 
-# Relationship annotations: from <symbol> to <symbol>
+
+# Relationship annotations: define an edge from <symbol> to <symbol>
 myEdges <- data.frame(from = character(),
                       to = character(),
                       stringsAsFactors = FALSE)
 
-
-
-# ==   3.3  ANNOTATE  ==========================================================
-
-# We will derive the following annotations from the data we have loaded:
-#
-# A: we will define a "relationship" between all genes that have the same
-#    GO annotation.
-# B: each relationship will get a "type". For this demo the type is simply
-#    the same as the GO annotation. It could be anything though.
-# C: each relationship will get a "weight". For this demo the weight is simply
-#    1 minus the frequency of the GO annotation, that is: more specific
-#    annotations get a lower weight, more generic annotations get a higher
-#    weight.
-
-
-# ===   3.3.1  Annotate relationships:
-
 for (i in 1:nrow(myGenes)){
-  # for each gene, add an edge to all other genes with the same GO id.
+  # for each gene, define an edge to all other genes with the same GO ID.
   thisSym <- myGenes$sym[i]
   thisGOid <- myGenes$GOid[i]
 
@@ -155,7 +177,19 @@ for (i in 1:nrow(myGenes)){
 
 
 
-# ===   3.3.2  Annotate relationship types:
+# ==   4.3  ANNOTATE  ==========================================================
+
+# We will derive the following annotations from the data we have loaded:
+#
+# A: each relationship will get a "type". For this demo the type is simply
+#    the same as the GO annotation. It could be anything though.
+# B: each relationship will get a "weight". For this demo the weight is simply
+#    1 minus the frequency of the GO annotation, that is: more specific
+#    annotations get a lower weight, more generic annotations get a higher
+#    weight.
+
+
+# ===   4.3.1  Annotate relationship types:
 
 myEdges$type <- character(nrow(myEdges)) # Add a "type" column - this could
                                          # be any kind of categorical data,
@@ -172,7 +206,7 @@ for (i in 1:nrow(myEdges)){  # for each edge, add the GO id of the "from" gene.
 
 
 
-# ===   3.3.3  Annotate relationship weights:
+# ===   4.3.2  Annotate relationship weights:
 
 # We can encode information in the edge thickness. In this demo, we draw
 # more specific (less frequently annotated) GO terms with a thicker line.
@@ -192,7 +226,7 @@ for (i in 1:nrow(myEdges)){  # for each edge, add the weight of the "from" gene.
 # Done with annotations
 
 
-# ==   3.4  LAYOUT  ============================================================
+# ==   4.4  LAYOUT  ============================================================
 
 # The layout phase is where we turn data into visuals.
 
@@ -205,7 +239,7 @@ myShapes <- list()
 # We will call the things that we are going to draw "shapes".
 # To draw our shapes, we need to define:
 #  - what they are
-#  - where the are going to be drawn
+#  - where they are going to be drawn
 #  - how large
 #  - with what stroke-width
 #  - with what colour
@@ -295,7 +329,7 @@ for (i in 1:nrow(myGenes)) {
   myFill <- myGOcolours[myGenes$GOid[i]]
 
   if (is.na(myFill)) {
-    myFill <- "#AAAAAA"   # light grey for unannotaded genes
+    myFill <- NACOLOUR
   }
 
   # At this scale, a typical gene is about a hair's width. We draw the outline
@@ -339,10 +373,10 @@ for (i in 1:nrow(myEdges)) {
 # Done. All shapes are defined.
 
 
-# ==   3.5  PLOT  ==============================================================
+# ==   4.5  PLOT  ==============================================================
 # cf. https://www.w3.org/TR/SVG
 
-# ===   3.5.1  Compute scale and translation
+# ===   4.5.1  Compute scale and translation
 
 # Caution: the SVG coordinate system has its origin (0, 0) in the TOP LEFT
 # corner, positive X goes right, and positive Y goes down. Here we define the
@@ -388,12 +422,12 @@ tXY <- c(Xpx / 2, Ypx / 2)  - (sXY * CHR20ORI)  # translate
 
 
 
-# ===   3.5.2  Write SVG header
+# ===   4.5.2  Write SVG header
 mySVG <- SVGheader()
 mySVG <- c(mySVG, SVGdefinePage(Xpx, Ypx))
 
 
-# ===   3.5.3  Render all elements
+# ===   4.5.3  Render all elements
 #
 for (i in 1:length(myShapes)) {
 
@@ -404,11 +438,11 @@ for (i in 1:length(myShapes)) {
 }
 
 
-# ===   3.5.4  Write SVG footer
+# ===   4.5.4  Write SVG footer
 mySVG <- c(mySVG, SVGfooter())
 
 
-# =    4  FINISH  ==============================================================
+# =    5  FINISH  ==============================================================
 
 # Write the SVG to file
 writeLines(mySVG, con = SVGFILE)
