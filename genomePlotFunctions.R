@@ -13,26 +13,27 @@
 
 
 #TOC> ==========================================================================
-#TOC>
-#TOC>   Section  Title                                      Line
-#TOC> ----------------------------------------------------------
-#TOC>   1        PACKAGES                                     39
-#TOC>   2        FUNCTIONS TO INITIALIZE DATA STRUCTURES      47
-#TOC>   3        ANNOTATION FUNCTIONS                         50
-#TOC>   4        LAYOUT FUNCTIONS                             64
-#TOC>   4.1        ang2rad()                                 108
-#TOC>   4.2        coord2circle()                            126
-#TOC>   5        PLOTTING FUNCTIONS                          154
-#TOC>   5.1        SVGheader()                               156
-#TOC>   5.2        SVGdefinePage()                           174
-#TOC>   5.3        SVGdrawCircle()                           198
-#TOC>   5.4        SVGdrawText()                             229
-#TOC>   5.5        SVGdrawLine()                             267
-#TOC>   5.6        SVGdrawRect()                             294
-#TOC>   5.7        st()                                      342
-#TOC>   5.8        SVGrenderElement()                        368
-#TOC>   5.9        SVGfooter()                               434
-#TOC>
+#TOC> 
+#TOC>   Section  Title                                            Line
+#TOC> ----------------------------------------------------------------
+#TOC>   1        PACKAGES                                           40
+#TOC>   2        FUNCTIONS TO INITIALIZE DATA STRUCTURES            48
+#TOC>   3        ANNOTATION FUNCTIONS                               51
+#TOC>   4        LAYOUT FUNCTIONS                                   66
+#TOC>   4.01       ang2rad()                                       110
+#TOC>   4.02       coord2circle()                                  128
+#TOC>   5        PLOTTING FUNCTIONS                                156
+#TOC>   5.01       SVGheader()                                     158
+#TOC>   5.02       SVGdefinePage()                                 176
+#TOC>   5.03       SVGdrawCircle()                                 200
+#TOC>   5.04       SVGdrawText()                                   231
+#TOC>   5.05       SVGdrawLine()                                   269
+#TOC>   5.06       SVGdrawCubic()                                  296
+#TOC>   5.07       SVGdrawRect()                                   327
+#TOC>   5.08       st()                                            375
+#TOC>   5.09       SVGrenderElement()                              401
+#TOC>   5.10       SVGfooter()                                     482
+#TOC> 
 #TOC> ==========================================================================
 
 
@@ -50,11 +51,12 @@ if (!require(readr, quietly=TRUE)) {
 # =    3  ANNOTATION FUNCTIONS  ================================================
 
 linMap <- function(x, low, high) {
-  # map a vector of numbers x to values between min and max.
+  # map a vector of numbers x to values between min and max. NA values
+  # are ignored.
 
   d <- high - low
-  x <- x  - min(x)
-  x <- x * (d / max(x))
+  x <- x  - min(x, na.rm = TRUE)
+  x <- x * (d / max(x, na.rm = TRUE))
   x <- x + low
   return(x)
 }
@@ -105,7 +107,7 @@ category2colour <- function(Cs,
 
 
 
-# ==   4.1  ang2rad()  =========================================================
+# ==   4.01  ang2rad()  ========================================================
 ang2rad <- function(a) {
   # Description:
   #    Convert a rotation angle a in degrees from vertical in clockwise
@@ -123,7 +125,7 @@ ang2rad <- function(a) {
   return(x)
 }
 
-# ==   4.2  coord2circle()  ====================================================
+# ==   4.02  coord2circle()  ===================================================
 coord2circle <- function(coord, l, ori, rad) {
   # Description:
   #     Convert linear coordinates on a line of length l to
@@ -153,7 +155,7 @@ coord2circle <- function(coord, l, ori, rad) {
 
 # =    5  PLOTTING FUNCTIONS  ==================================================
 
-# ==   5.1  SVGheader()  =======================================================
+# ==   5.01  SVGheader()  ======================================================
 SVGheader <- function() {
   #
   # Description:
@@ -171,7 +173,7 @@ SVGheader <- function() {
   return(s)
 }
 
-# ==   5.2  SVGdefinePage()  ===================================================
+# ==   5.02  SVGdefinePage()  ==================================================
 SVGdefinePage <- function(w, h) {
   #
   # Description:
@@ -195,7 +197,7 @@ SVGdefinePage <- function(w, h) {
 }
 
 
-# ==   5.3  SVGdrawCircle()  ===================================================
+# ==   5.03  SVGdrawCircle()  ==================================================
 SVGdrawCircle <- function(cx, cy, r,
                           fill = "#FFFFFF",
                           stroke= "#000000",
@@ -226,7 +228,7 @@ SVGdrawCircle <- function(cx, cy, r,
 }
 
 
-# ==   5.4  SVGdrawText()  =====================================================
+# ==   5.04  SVGdrawText()  ====================================================
 SVGdrawText <- function(x, y,
                         font,
                         size,
@@ -264,18 +266,18 @@ SVGdrawText <- function(x, y,
 }
 
 
-# ==   5.5  SVGdrawLine()  =====================================================
+# ==   5.05  SVGdrawLine()  ====================================================
 SVGdrawLine <- function(x1, y1, x2, y2,
                         stroke = "#000000",
                         sw = 1.0) {
   #
   # Description:
-  #     Write SVG code to place text.
+  #     Write SVG code to draw a line.
   #
   # Arguments:
   #     x1, y1, x2, y2  num   start and end coordinates of the line
-  #     stroke    char  line colour, default black
-  #     sw        num  stroke width, default 1.0 point
+  #     stroke          char  line colour, default black
+  #     sw              num   stroke width, default 1.0 point
   #
   # Value:
   #     String. SVG commands.
@@ -291,7 +293,38 @@ SVGdrawLine <- function(x1, y1, x2, y2,
 }
 
 
-# ==   5.6  SVGdrawRect()  =====================================================
+# ==   5.06  SVGdrawCubic()  ===================================================
+SVGdrawCubic <- function(x1, y1, x2, y2, x3, y3, x4, y4,
+                         fill = "none",
+                         stroke = "#000000",
+                         sw = 1.0) {
+  #
+  # Description:
+  #     Write SVG code to draw a cubic Bezier curve.
+  #
+  # Arguments:
+  #     x1, y1          num   start coordinates of the curve
+  #     x2, y2, x3, y3  num   control points
+  #     x4, y4          num   end coordinates of the line
+  #     stroke          char  line colour, default black
+  #     sw              num   stroke width, default 1.0 point
+  #
+  # Value:
+  #     String. SVG commands.
+
+  s <- paste( sprintf("<path d=\""),
+              sprintf("M %f %f ", x1, y1),
+              sprintf("C %f %f %f %f %f %f ", x2, y2, x3, y3, x4, y4),
+              sprintf("Z\" "),
+              sprintf("fill=\"%s\" ", fill),
+              sprintf("stroke=\"%s\" ", stroke),
+              sprintf("stroke-width=\"%f\" />", sw),
+              collapse = " ")
+  return(s)
+}
+
+
+# ==   5.07  SVGdrawRect()  ====================================================
 SVGdrawRect <- function(x, y, w, h, ang,
                         fill = "#FFFFFF",
                         stroke = "none",
@@ -339,7 +372,7 @@ SVGdrawRect <- function(x, y, w, h, ang,
 }
 
 
-# ==   5.7  st()  ==============================================================
+# ==   5.08  st()  =============================================================
 st <- function(xy, s, t, yPage) {
   # Description:
   #   Simple scaling and translation
@@ -365,7 +398,7 @@ st <- function(xy, s, t, yPage) {
 }
 
 
-# ==   5.8  SVGrenderElement()  ================================================
+# ==   5.09  SVGrenderElement()  ===============================================
 
 SVGrenderElement <- function(li, sc, tr, Y) {
   #
@@ -410,19 +443,34 @@ SVGrenderElement <- function(li, sc, tr, Y) {
                      y2 = xy2[2],
                      stroke = li$stroke,
                      sw = li$sw)
-  }  else if (li$type == "rect") {
-    xCorner <- li$centre[1] - (li$w / 2)
-    yCorner <- li$centre[2] + (li$h / 2)
-    xy <- st(c(xCorner, yCorner), sc, tr, Y)
-    s <- SVGdrawRect(x = xy[1],
-                     y = xy[2],
-                     w = li$w * sc,
-                     h = li$h * sc,
-                     ang = li$ang,
-                     fill = li$fill,
-                     stroke = li$stroke,
-                     sw = li$sw)
-  } else {
+  }  else if (li$type == "cubic") {
+      xy1 <- st(li$p1, sc, tr, Y)
+      xy2 <- st(li$p2, sc, tr, Y)
+      xy3 <- st(li$p3, sc, tr, Y)
+      xy4 <- st(li$p4, sc, tr, Y)
+      s <- SVGdrawCubic(x1 = xy1[1],
+                        y1 = xy1[2],
+                        x2 = xy2[1],
+                        y2 = xy2[2],
+                        x3 = xy3[1],
+                        y3 = xy3[2],
+                        x4 = xy4[1],
+                        y4 = xy4[2],
+                        stroke = li$stroke,
+                        sw = li$sw)
+    }  else if (li$type == "rect") {
+      xCorner <- li$centre[1] - (li$w / 2)
+      yCorner <- li$centre[2] + (li$h / 2)
+      xy <- st(c(xCorner, yCorner), sc, tr, Y)
+      s <- SVGdrawRect(x = xy[1],
+                       y = xy[2],
+                       w = li$w * sc,
+                       h = li$h * sc,
+                       ang = li$ang,
+                       fill = li$fill,
+                       stroke = li$stroke,
+                       sw = li$sw)
+    } else {
     stop(sprintf("Unsupported SVG element type \"%s\"", li$type))
   }
 
@@ -431,7 +479,7 @@ SVGrenderElement <- function(li, sc, tr, Y) {
 
 
 
-# ==   5.9  SVGfooter()  =======================================================
+# ==   5.10  SVGfooter()  ======================================================
 SVGfooter <- function() {
   #
   # Description:
