@@ -4,8 +4,8 @@
 #           connections.
 #
 #
-# Version:  0.5
-# Date:     2018 03 05
+# Version:  1.0
+# Date:     2018 03 17
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -14,6 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   1.0  Final version for Biohacks 2018
 #   0.5  Added an Introduction section and more comments
 #   0.4  Update for updated datafiles
 #   0.3  Bugfix in coordinate scaling to SVG coordinates for rectangles
@@ -28,26 +29,26 @@
 
 
 #TOC> ==========================================================================
-#TOC>
+#TOC> 
 #TOC>   Section  Title                                   Line
 #TOC> -------------------------------------------------------
-#TOC>   1        INTRODUCTION                              54
-#TOC>   2        PARAMETERS                                92
-#TOC>   3        PACKAGES AND FUNCTIONS                   117
-#TOC>   4        PROCESS                                  126
-#TOC>   4.1        READ SOURCE DATA                       132
-#TOC>   4.2        INITIALIZE DATA STRUCTURES             141
-#TOC>   4.3        ANNOTATE                               182
-#TOC>   4.3.1          Annotate relationship types:       194
-#TOC>   4.3.2          Annotate relationship weights:     211
-#TOC>   4.4        LAYOUT                                 231
-#TOC>   4.5        PLOT                                   378
-#TOC>   4.5.1          Compute scale and translation      381
-#TOC>   4.5.2          Write SVG header                   427
-#TOC>   4.5.3          Render all elements                432
-#TOC>   4.5.4          Write SVG footer                   443
-#TOC>   5        FINISH                                   447
-#TOC>
+#TOC>   1        INTRODUCTION                              55
+#TOC>   2        PARAMETERS                                93
+#TOC>   3        PACKAGES AND FUNCTIONS                   118
+#TOC>   4        PROCESS                                  127
+#TOC>   4.1        READ SOURCE DATA                       133
+#TOC>   4.2        INITIALIZE DATA STRUCTURES             142
+#TOC>   4.3        ANNOTATE                               181
+#TOC>   4.3.1          Annotate relationship types:       193
+#TOC>   4.3.2          Annotate relationship weights:     210
+#TOC>   4.4        LAYOUT                                 230
+#TOC>   4.5        PLOT                                   377
+#TOC>   4.5.1          Compute scale and translation      380
+#TOC>   4.5.2          Write SVG header                   426
+#TOC>   4.5.3          Render all elements                431
+#TOC>   4.5.4          Write SVG footer                   442
+#TOC>   5        FINISH                                   446
+#TOC> 
 #TOC> ==========================================================================
 
 
@@ -189,7 +190,7 @@ for (i in 1:nrow(myGenes)){
 #    weight.
 
 
-# ===   4.3.1  Annotate relationship types:
+# ===   4.3.1  Annotate relationship types:  
 
 myEdges$type <- character(nrow(myEdges)) # Add a "type" column - this could
                                          # be any kind of categorical data,
@@ -376,7 +377,7 @@ for (i in 1:nrow(myEdges)) {
 # ==   4.5  PLOT  ==============================================================
 # cf. https://www.w3.org/TR/SVG
 
-# ===   4.5.1  Compute scale and translation
+# ===   4.5.1  Compute scale and translation 
 
 # Caution: the SVG coordinate system has its origin (0, 0) in the TOP LEFT
 # corner, positive X goes right, and positive Y goes down. Here we define the
@@ -422,12 +423,12 @@ tXY <- c(Xpx / 2, Ypx / 2)  - (sXY * CHR20ORI)  # translate
 
 
 
-# ===   4.5.2  Write SVG header
+# ===   4.5.2  Write SVG header              
 mySVG <- SVGheader()
 mySVG <- c(mySVG, SVGdefinePage(Xpx, Ypx))
 
 
-# ===   4.5.3  Render all elements
+# ===   4.5.3  Render all elements           
 #
 for (i in 1:length(myShapes)) {
 
@@ -438,7 +439,7 @@ for (i in 1:length(myShapes)) {
 }
 
 
-# ===   4.5.4  Write SVG footer
+# ===   4.5.4  Write SVG footer              
 mySVG <- c(mySVG, SVGfooter())
 
 

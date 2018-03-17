@@ -5,7 +5,7 @@
 #
 #
 # Version:  1.0
-# Date:     2018 03 16
+# Date:     2018 03 17
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -14,7 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
-#   1.0  Minor bugfix - this version considered final
+#   1.0  Final version for Biohacks 2018
 #   0.2  Implemented Force Directed Layout, and cubic Bezier curve edges
 #   0.1  Derived from genomePlotDemo.R   V 0.3
 #
@@ -25,7 +25,7 @@
 
 
 #TOC> ==========================================================================
-#TOC> 
+#TOC>
 #TOC>   Section  Title                                             Line
 #TOC> -----------------------------------------------------------------
 #TOC>   1        INTRODUCTION                                        58
@@ -51,7 +51,7 @@
 #TOC>   8.3        Render all elements                              760
 #TOC>   8.4        Write SVG footer                                 771
 #TOC>   9        FINISH                                             775
-#TOC> 
+#TOC>
 #TOC> ==========================================================================
 
 
@@ -437,7 +437,7 @@ for (i in 1:nrow(myProteins)) {
 }
 
 
-# ===   7.4.1  Force directed layout: setup            
+# ===   7.4.1  Force directed layout: setup
 
 # In this demo code, we will use a force directed layout to arrange the
 # proteins on the circle in the following way: we tether the position
@@ -531,7 +531,7 @@ toCircle <- function(p, ori, rad) {
 
 
 
-# ===   7.4.2  Force directed layout: iterations       
+# ===   7.4.2  Force directed layout: iterations
 
 # Ready to run the FDL schedule
 

@@ -3,8 +3,8 @@
 # Purpose:  Demo a genome plot of genes on a line.
 #
 #
-# Version:  0.3
-# Date:     2018 03 04
+# Version:  1.0
+# Date:     2018 03 18
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -13,6 +13,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   1.0  Final version for Biohacks 2018
 #   0.3  Added an introduction section and more comments
 #   0.2  Updated gene data
 #   0.1  Derived from genomePlotDemo.R
