@@ -24,7 +24,7 @@
 
 
 #TOC> ==========================================================================
-#TOC> 
+#TOC>
 #TOC>   Section  Title                                             Line
 #TOC> -----------------------------------------------------------------
 #TOC>   1        INTRODUCTION                                        57
@@ -50,7 +50,7 @@
 #TOC>   8.3        Render all elements                              759
 #TOC>   8.4        Write SVG footer                                 770
 #TOC>   9        FINISH                                             774
-#TOC> 
+#TOC>
 #TOC> ==========================================================================
 
 
@@ -436,7 +436,7 @@ for (i in 1:nrow(myProteins)) {
 }
 
 
-# ===   7.4.1  Force directed layout: setup            
+# ===   7.4.1  Force directed layout: setup
 
 # In this demo code, we will use a force directed layout to arrange the
 # proteins on the circle in the following way: we tether the position
@@ -530,7 +530,7 @@ toCircle <- function(p, ori, rad) {
 
 
 
-# ===   7.4.2  Force directed layout: iterations       
+# ===   7.4.2  Force directed layout: iterations
 
 # Ready to run the FDL schedule
 
@@ -558,7 +558,7 @@ stepSums <- 0     # We don't really need this here - but keeping
 for (i in 1:nIterate) {  # iterate steps
 
   pBar(i, nIterate)
-  Fprogress[i] <- 0
+
 
   # calculate current kR
   if (i < kRwait * nIterate) {  # kR is minimum
