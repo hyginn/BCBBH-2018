@@ -4,8 +4,8 @@
 #           connections.
 #
 #
-# Version:  0.2
-# Date:     2018 03 05
+# Version:  1.0
+# Date:     2018 03 16
 # Author:   Boris Steipe (boris.steipe@utoronto.ca)
 #
 # Dependencies:
@@ -14,6 +14,7 @@
 # License: GPL-3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 #
 # Version history:
+#   1.0  Minor bugfix - this version considered final
 #   0.2  Implemented Force Directed Layout, and cubic Bezier curve edges
 #   0.1  Derived from genomePlotDemo.R   V 0.3
 #
@@ -24,33 +25,33 @@
 
 
 #TOC> ==========================================================================
-#TOC>
+#TOC> 
 #TOC>   Section  Title                                             Line
 #TOC> -----------------------------------------------------------------
-#TOC>   1        INTRODUCTION                                        57
-#TOC>   2        PARAMETERS                                          92
-#TOC>   3        PACKAGES AND FUNCTIONS                             123
-#TOC>   4        READ SOURCE DATA                                   154
-#TOC>   5        INITIALIZE DATA STRUCTURES                         165
-#TOC>   6        ANNOTATE                                           200
-#TOC>   6.1        Annotate Gene-Protein edge types:                212
-#TOC>   6.2        Annotate Gene-Protein edge weights:              224
-#TOC>   7        LAYOUT                                             249
-#TOC>   7.1        Chromosome backbone                              285
-#TOC>   7.2        Descriptive text                                 301
-#TOC>   7.3        Layout Genes                                     312
-#TOC>   7.4        Layout Proteins                                  386
-#TOC>   7.4.1          Force directed layout: setup                 439
-#TOC>   7.4.2          Force directed layout: iterations            533
-#TOC>   7.4.3          Force directed layout: coordinate update     619
-#TOC>   7.5        Layout functional interaction edges              662
-#TOC>   8        PLOT                                               705
-#TOC>   8.1        Compute scale and translation                    708
-#TOC>   8.2        Write SVG header                                 754
-#TOC>   8.3        Render all elements                              759
-#TOC>   8.4        Write SVG footer                                 770
-#TOC>   9        FINISH                                             774
-#TOC>
+#TOC>   1        INTRODUCTION                                        58
+#TOC>   2        PARAMETERS                                          93
+#TOC>   3        PACKAGES AND FUNCTIONS                             124
+#TOC>   4        READ SOURCE DATA                                   155
+#TOC>   5        INITIALIZE DATA STRUCTURES                         166
+#TOC>   6        ANNOTATE                                           201
+#TOC>   6.1        Annotate Gene-Protein edge types:                213
+#TOC>   6.2        Annotate Gene-Protein edge weights:              225
+#TOC>   7        LAYOUT                                             250
+#TOC>   7.1        Chromosome backbone                              286
+#TOC>   7.2        Descriptive text                                 302
+#TOC>   7.3        Layout Genes                                     313
+#TOC>   7.4        Layout Proteins                                  387
+#TOC>   7.4.1          Force directed layout: setup                 440
+#TOC>   7.4.2          Force directed layout: iterations            534
+#TOC>   7.4.3          Force directed layout: coordinate update     620
+#TOC>   7.5        Layout functional interaction edges              663
+#TOC>   8        PLOT                                               706
+#TOC>   8.1        Compute scale and translation                    709
+#TOC>   8.2        Write SVG header                                 755
+#TOC>   8.3        Render all elements                              760
+#TOC>   8.4        Write SVG footer                                 771
+#TOC>   9        FINISH                                             775
+#TOC> 
 #TOC> ==========================================================================
 
 
@@ -436,7 +437,7 @@ for (i in 1:nrow(myProteins)) {
 }
 
 
-# ===   7.4.1  Force directed layout: setup
+# ===   7.4.1  Force directed layout: setup            
 
 # In this demo code, we will use a force directed layout to arrange the
 # proteins on the circle in the following way: we tether the position
@@ -530,7 +531,7 @@ toCircle <- function(p, ori, rad) {
 
 
 
-# ===   7.4.2  Force directed layout: iterations
+# ===   7.4.2  Force directed layout: iterations       
 
 # Ready to run the FDL schedule
 
